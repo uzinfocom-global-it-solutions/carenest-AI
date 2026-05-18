@@ -1,65 +1,39 @@
 import 'dart:convert';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../voice/data/voice_playback_orchestrator.dart';
 import 'local_notification_service.dart';
 import 'notification_deep_link_handler.dart';
 
+/// Handles incoming push payloads delivered via SSE (push_notification events).
+/// Firebase removed — all delivery is now through SSE + flutter_local_notifications.
 class PushNotificationHandler {
   PushNotificationHandler._();
 
-  static Future<void> handleForegroundMessage(RemoteMessage message) async {
-    debugPrint('[FCM][FG] ${message.messageId} type=${message.data['type']}');
+  /// Called by VoiceNotificationController when SSE delivers a push_notification event.
+  static Future<void> handleSseMessage(Map<String, dynamic> data) async {
+    debugPrint('[Push][SSE] type=${data['type']} priority=${data['priority']}');
 
     if (!await _notificationsEnabled()) return;
 
-    final type = message.data['type'] ?? '';
-    final priority = _parsePriority(message.data['priority']);
+    final type = data['type'] as String? ?? '';
+    final priority = _parsePriority(data['priority'] as String?);
 
     if (type == 'voice_action') {
-      await _handleVoiceAction(message, priority);
+      await _handleVoiceAction(data, priority);
     } else {
-      await _showGenericNotification(message, priority);
+      await _showGenericNotification(data, priority);
     }
-  }
-
-  static Future<void> handleBackgroundMessage(RemoteMessage message) async {
-    debugPrint('[FCM][BG] ${message.messageId}');
-
-    final type = message.data['type'] ?? '';
-    final priority = _parsePriority(message.data['priority']);
-
-    if (type == 'voice_action') {
-      await _handleVoiceAction(message, priority);
-    }
-  }
-
-  static void handleNotificationTap(RemoteMessage message) {
-    debugPrint('[FCM][TAP] ${message.messageId}');
-
-    // Store pending deep-link so screens can scroll to a specific message.
-    final chatMessageId = message.data['chatMessageId'];
-    if (chatMessageId != null) {
-      NotificationDeepLinkHandler.instance.setPendingChatMessage(
-        int.tryParse(chatMessageId.toString()),
-      );
-    }
-
-    // Route to notification center — navigation is handled by the app shell
-    NotificationTapRouter.dispatch(message.data);
   }
 
   static Future<void> _handleVoiceAction(
-    RemoteMessage message,
+    Map<String, dynamic> data,
     NotificationPriorityLevel priority,
   ) async {
-    final data = message.data;
-    final actionId = int.tryParse(data['actionId'] ?? '0') ?? 0;
-    final text = data['text'] ?? message.notification?.body ?? '';
-    final requiresConfirmation = data['requiresConfirmation'] == 'true';
+    final actionId = int.tryParse(data['actionId']?.toString() ?? '0') ?? 0;
+    final text = data['text'] as String? ?? '';
+    final requiresConfirmation = data['requiresConfirmation']?.toString() == 'true';
 
-    // Show local notification with quick-action buttons
     await LocalNotificationService.instance.showVoiceAction(
       actionId: actionId,
       text: text,
@@ -67,7 +41,6 @@ class PushNotificationHandler {
       priority: priority,
     );
 
-    // Auto TTS playback — routed through orchestrator (priority queue, no overlap)
     if (text.isNotEmpty && await _voiceEnabled()) {
       final ttsPriority = priority == NotificationPriorityLevel.emergency
           ? 100
@@ -84,18 +57,19 @@ class PushNotificationHandler {
   }
 
   static Future<void> _showGenericNotification(
-    RemoteMessage message,
+    Map<String, dynamic> data,
     NotificationPriorityLevel priority,
   ) async {
-    final notification = message.notification;
-    if (notification == null) return;
+    final title = data['title'] as String? ?? 'CareNestAI';
+    final body = data['body'] as String? ?? '';
+    if (body.isEmpty) return;
 
     await LocalNotificationService.instance.show(
-      id: message.hashCode,
-      title: notification.title ?? 'CareNestAI',
-      body: notification.body ?? '',
+      id: data.hashCode,
+      title: title,
+      body: body,
       priority: priority,
-      payload: jsonEncode(message.data),
+      payload: jsonEncode(data),
     );
   }
 
@@ -131,7 +105,6 @@ class PushNotificationHandler {
 class NotificationTapRouter {
   static final _listeners = <void Function(Map<String, dynamic>)>[];
   static void Function(String route)? _navigateTo;
-  // Queues a route when the navigator isn't wired yet (app terminated state).
   static String? _pendingRoute;
 
   static void setNavigator(void Function(String route) fn) {
@@ -149,13 +122,10 @@ class NotificationTapRouter {
     final type = data['type'] as String? ?? '';
     final hasChatMessageId = data.containsKey('chatMessageId');
 
-    // Any notification tied to a voice action or chat message opens AI chat.
     if (type == 'voice_action' || type == 'chat_message' || hasChatMessageId) {
       if (_navigateTo != null) {
         _navigateTo!('/chat');
       } else {
-        // App launched from terminated state — router not ready yet.
-        // setNavigator() will flush this when the widget tree initializes.
         _pendingRoute = '/chat';
       }
     }
@@ -163,5 +133,18 @@ class NotificationTapRouter {
     for (final l in _listeners) {
       l(data);
     }
+  }
+
+  static void handleTap(String? payload) {
+    if (payload == null) return;
+    try {
+      final data = jsonDecode(payload) as Map<String, dynamic>;
+      final chatMessageId = data['chatMessageId'];
+      if (chatMessageId != null) {
+        NotificationDeepLinkHandler.instance
+            .setPendingChatMessage(int.tryParse(chatMessageId.toString()));
+      }
+      dispatch(data);
+    } catch (_) {}
   }
 }

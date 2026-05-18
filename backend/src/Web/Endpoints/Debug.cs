@@ -28,7 +28,6 @@ public class Debug : IEndpointGroup
         groupBuilder.MapPost(TriggerMedication, "triggers/medication");
         groupBuilder.MapPost(TestEscalation, "escalation/test");
         groupBuilder.MapPost(TestNotification, "notifications/test");
-        groupBuilder.MapGet(GetDeviceTokens, "devices");
         groupBuilder.MapGet(GetVoiceQueue, "voice/queue");
         groupBuilder.MapGet(GetDeliveryStatus, "delivery");
         groupBuilder.MapGet(GetEscalationState, "escalation/state");
@@ -52,7 +51,7 @@ public class Debug : IEndpointGroup
     }
 
     [EndpointSummary("Debug: Ping Me — instant push + voice to current user")]
-    [EndpointDescription("Sends a push notification + voice action immediately to the authenticated user. Use this right after Swagger authorization to test the full FCM→Flutter→TTS pipeline.")]
+    [EndpointDescription("Sends a push notification + voice action immediately to the authenticated user via SSE.")]
     public static async Task<IResult> PingMe(
         IApplicationDbContext db,
         IPushNotificationService push,
@@ -70,7 +69,7 @@ public class Debug : IEndpointGroup
 
         const string text = "Привет! Система CareNestAI работает. Это тестовое голосовое уведомление.";
 
-        // FCM push
+        // Push via SSE
         var delivered = await push.SendToUserAsync(
             userId, "🔔 CareNestAI — Тест", text, NotificationPriority.High,
             new Dictionary<string, string>
@@ -98,11 +97,11 @@ public class Debug : IEndpointGroup
 
         return Results.Ok(new
         {
-            fcmDelivered = delivered,
+            sseDelivered = delivered,
             voiceActionId = action?.Id,
             message = delivered > 0
-                ? "✅ Push отправлен! Проверь телефон."
-                : "⚠️ FCM токен не найден. Открой Flutter-приложение и попробуй снова.",
+                ? "✅ Push отправлен через SSE! Проверь приложение."
+                : "⚠️ SSE соединение не активно. Открой Flutter-приложение и попробуй снова.",
         });
     }
 
@@ -250,22 +249,6 @@ public class Debug : IEndpointGroup
             })), ct);
 
         return Results.Ok(new { sent = true, userId, eventType = req.EventType ?? "debug_notification" });
-    }
-
-    [EndpointSummary("Debug: Get Device Tokens")]
-    public static async Task<IResult> GetDeviceTokens(
-        IApplicationDbContext db,
-        HttpContext ctx,
-        CancellationToken ct)
-    {
-        var userId = ctx.User.FindFirst("sub")?.Value ?? string.Empty;
-        var tokens = await db.DeviceTokens
-            .Where(t => t.UserId == userId)
-            .OrderByDescending(t => t.LastSeenAt)
-            .Select(t => new { t.Id, t.Token, t.Platform, t.DeviceName, t.IsActive, t.LastSeenAt, t.CreatedAt })
-            .ToListAsync(ct);
-
-        return Results.Ok(tokens);
     }
 
     [EndpointSummary("Debug: Get Voice Action Queue")]

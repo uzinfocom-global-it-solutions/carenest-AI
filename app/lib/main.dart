@@ -1,4 +1,3 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/config/app_config.dart';
@@ -21,7 +20,6 @@ import 'features/recommendations/data/recommendations_service.dart';
 import 'features/notifications/application/notifications_controller.dart';
 import 'features/notifications/application/voice_notification_controller.dart';
 import 'features/notifications/data/notifications_service.dart';
-import 'features/notifications/data/firebase_service.dart';
 import 'features/notifications/data/sse_client.dart';
 import 'features/settings/application/app_settings_controller.dart';
 import 'features/voice/data/voice_service.dart';
@@ -32,13 +30,14 @@ import 'package:go_router/go_router.dart';
 import 'shared/navigation/app_router.dart';
 import 'shared/theme/app_theme.dart';
 import 'features/notifications/data/push_notification_handler.dart';
+import 'features/notifications/data/local_notification_service.dart';
 import 'features/monitoring/application/monitoring_controller.dart';
 import 'features/monitoring/data/monitoring_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppConfig.load();
-  await Firebase.initializeApp();
+  await LocalNotificationService.instance.initialize();
   runApp(const CareNestAiApp());
 }
 
@@ -154,11 +153,6 @@ class _CareNestAiAppState extends State<CareNestAiApp> {
 
     _appSettingsController = AppSettingsController()..load();
     _voiceService = VoiceService();
-
-    // Initialize Firebase after the first frame so BuildContext is ready
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await FirebaseService.instance.initialize(_apiClient);
-    });
 
     _router = buildRouter(_authController);
 
@@ -294,7 +288,6 @@ class _CareNestAiAppState extends State<CareNestAiApp> {
     _bootstrappedForFamily = true;
 
     _sseClient.connect();
-    FirebaseService.instance.ensureTokenRegistered(_apiClient);
 
     final familyId = await _tokenStorage.getFamilyId();
     if (familyId == null) return;

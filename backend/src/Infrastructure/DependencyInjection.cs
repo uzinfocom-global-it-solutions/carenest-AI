@@ -6,11 +6,9 @@ using Backend.Infrastructure.BackgroundServices;
 using Backend.Infrastructure.Caching;
 using Backend.Infrastructure.Data;
 using Backend.Infrastructure.Data.Interceptors;
-using Backend.Infrastructure.Firebase;
 using Backend.Infrastructure.Identity;
 using Backend.Infrastructure.Services;
 using Backend.Infrastructure.Weather;
-using FirebaseAdmin.Messaging;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -111,19 +109,8 @@ public static class DependencyInjection
         builder.Services.AddScoped<INotificationService, NotificationService>();
         builder.Services.AddScoped<IAuditService, AuditService>();
 
-        // Firebase
-        builder.Services.Configure<FirebaseOptions>(
-            builder.Configuration.GetSection(FirebaseOptions.SectionName));
-
-        builder.Services.AddSingleton<FirebaseMessaging>(sp =>
-        {
-            var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<FirebaseOptions>>();
-            var logger = sp.GetRequiredService<ILogger<FirebasePushNotificationService>>();
-            return FirebaseInitializer.Initialize(opts, logger);
-        });
-
-        builder.Services.AddScoped<IPushNotificationService, FirebasePushNotificationService>();
-        builder.Services.AddScoped<IDeviceTokenService, DeviceTokenService>();
+        // Push notifications via SSE (no external service required)
+        builder.Services.AddScoped<IPushNotificationService, LocalPushNotificationService>();
         builder.Services.AddScoped<VoiceActionDeduplicationService>();
         builder.Services.AddScoped<IVoiceActionService, VoiceActionService>();
         builder.Services.AddScoped<IProactiveContextService, ProactiveContextService>();

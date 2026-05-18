@@ -16,7 +16,6 @@
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="BCrypt.Net-Next" />
-    <PackageReference Include="FirebaseAdmin" />
   </ItemGroup>
 
   <ItemGroup>

@@ -47,8 +47,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     public DbSet<TodoList> TodoLists => Set<TodoList>();
     public DbSet<TodoItem> TodoItems => Set<TodoItem>();
 
-    // Push / Voice / Medication
-    public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
+    // Voice / Medication
     public DbSet<VoiceAction> VoiceActions => Set<VoiceAction>();
     public DbSet<MedicationSchedule> MedicationSchedules => Set<MedicationSchedule>();
 

@@ -12,14 +12,6 @@
     <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
   </ItemGroup>
 
-  <!-- Copy Firebase service account key to output directory so the server finds it at runtime -->
-  <ItemGroup>
-    <None Include="..\Infrastructure\firebase-key.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>firebase-key.json</Link>
-    </None>
-  </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />

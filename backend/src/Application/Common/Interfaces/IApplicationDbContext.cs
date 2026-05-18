@@ -40,8 +40,7 @@ public interface IApplicationDbContext
     DbSet<TodoList> TodoLists { get; }
     DbSet<TodoItem> TodoItems { get; }
 
-    // Push / Voice / Medication
-    DbSet<DeviceToken> DeviceTokens { get; }
+    // Voice / Medication
     DbSet<VoiceAction> VoiceActions { get; }
     DbSet<MedicationSchedule> MedicationSchedules { get; }
 
