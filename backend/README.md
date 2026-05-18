@@ -1,6 +1,6 @@
-# Backend
+﻿# Backend
 
-.NET 10 API for ParentAI. Clean Architecture layout (Domain / Application / Infrastructure / Web), MediatR for CQRS, EF Core + Postgres, Redis cache, JWT auth, Swagger UI.
+.NET 10 API for CareNest. Clean Architecture layout (Domain / Application / Infrastructure / Web), MediatR for CQRS, EF Core + Postgres, Redis cache, JWT auth, Swagger UI.
 
 ## Prerequisites
 
@@ -44,18 +44,18 @@ Aspire dashboard opens automatically with logs, traces, and the live URL list. P
 
 Default connection strings in `src/Web/appsettings.json` already match `docker/docker-compose.yml`:
 
-- Postgres: `Host=localhost;Port=5432;Database=parentai;Username=parentai;Password=parentai_dev_pass`
+- Postgres: `Host=localhost;Port=5432;Database=carenest;Username=carenest;Password=carenest_dev_pass`
 - Redis: `localhost:6379`
 
 If your local Postgres uses different credentials, override per-developer with user-secrets (kept out of source):
 
 ```bash
 dotnet user-secrets set "ConnectionStrings:BackendDb" \
-  "Host=localhost;Port=5432;Database=parentai;Username=YOUR_USER;Password=YOUR_PASS" \
+  "Host=localhost;Port=5432;Database=carenest;Username=YOUR_USER;Password=YOUR_PASS" \
   --project src/Web
 ```
 
-The user-secrets store sits in `%APPDATA%\Microsoft\UserSecrets\parentai-backend-web\secrets.json`.
+The user-secrets store sits in `%APPDATA%\Microsoft\UserSecrets\carenest-backend-web\secrets.json`.
 
 ### JWT
 

@@ -1,5 +1,5 @@
-name: app
-description: "ParentAI - AI Family Operating System"
+﻿name: app
+description: "CareNest - AI Family Operating System"
 publish_to: 'none'
 version: 1.0.0+1
 

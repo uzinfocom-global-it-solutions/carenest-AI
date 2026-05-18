@@ -1,4 +1,4 @@
-services:
+﻿services:
   backend:
     build:
       context: ..
@@ -8,12 +8,12 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: "http://+:8080"
-      ConnectionStrings__BackendDb: "Host=postgres;Port=5432;Database=parentai;Username=parentai;Password=${POSTGRES_PASSWORD:-parentai_dev_pass}"
+      ConnectionStrings__BackendDb: "Host=postgres;Port=5432;Database=carenest;Username=carenest;Password=${POSTGRES_PASSWORD:-carenest_dev_pass}"
       ConnectionStrings__Redis: "redis:6379"
       Cors__AllowedOrigins: "${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}"
       Jwt__SecretKey: "${JWT_SECRET_KEY:-dev-only-secret-key-CHANGE-IN-PROD-must-be-32-chars-minimum!!}"
-      Jwt__Issuer: "ParentAI"
-      Jwt__Audience: "ParentAI"
+      Jwt__Issuer: "CareNest"
+      Jwt__Audience: "CareNest"
       Jwt__AccessTokenExpiryMinutes: "15"
       Jwt__RefreshTokenExpiryDays: "30"
     depends_on:
@@ -28,7 +28,7 @@ services:
       retries: 6
       start_period: 30s
     networks:
-      - parentai-network
+      - carenest-network
     restart: unless-stopped
 
   postgres:
@@ -36,18 +36,18 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: parentai
-      POSTGRES_USER: parentai
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-parentai_dev_pass}"
+      POSTGRES_DB: carenest
+      POSTGRES_USER: carenest
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-carenest_dev_pass}"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U parentai -d parentai"]
+      test: ["CMD-SHELL", "pg_isready -U carenest -d carenest"]
       interval: 5s
       timeout: 5s
       retries: 10
     networks:
-      - parentai-network
+      - carenest-network
     restart: unless-stopped
 
   redis:
@@ -63,7 +63,7 @@ services:
       timeout: 3s
       retries: 10
     networks:
-      - parentai-network
+      - carenest-network
     restart: unless-stopped
 
   pgadmin:
@@ -71,12 +71,12 @@ services:
     ports:
       - "5050:80"
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@parentai.dev
+      PGADMIN_DEFAULT_EMAIL: admin@carenest.dev
       PGADMIN_DEFAULT_PASSWORD: admin
     depends_on:
       - postgres
     networks:
-      - parentai-network
+      - carenest-network
     restart: unless-stopped
 
 volumes:
@@ -84,5 +84,5 @@ volumes:
   redis-data:
 
 networks:
-  parentai-network:
+  carenest-network:
     driver: bridge

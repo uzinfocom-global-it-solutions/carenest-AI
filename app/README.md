@@ -1,6 +1,6 @@
-# app
+﻿# app
 
-Flutter app for ParentAI. Targets iOS, Android, and (scaffolded) Windows. Talks to the ParentAI backend over HTTP with JWT bearer auth.
+Flutter app for CareNest. Targets iOS, Android, and (scaffolded) Windows. Talks to the CareNest backend over HTTP with JWT bearer auth.
 
 ## Prerequisites
 

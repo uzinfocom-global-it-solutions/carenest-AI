@@ -1,13 +1,13 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>ParentAI uses the microphone so you can speak to the assistant.</string>
+	<string>CareNest uses the microphone so you can speak to the assistant.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>ParentAI converts your speech to text so it can understand and respond.</string>
+	<string>CareNest converts your speech to text so it can understand and respond.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>CareNestAI uses your location to show current weather and personalised recommendations for your family.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
