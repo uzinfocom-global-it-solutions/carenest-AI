@@ -1,4 +1,4 @@
-namespace Backend.Domain.Entities;
+﻿namespace Backend.Domain.Entities;
 
 public class AiDecisionLog
 {
@@ -12,21 +12,16 @@ public class AiDecisionLog
     public int? TargetChildId { get; set; }
     public int? RelatedSessionId { get; set; }
 
-    /// Chains all decisions, voice actions, and SSE events from one orchestration cycle.
     public string? DecisionChainId { get; set; }
 
-    /// Idempotency key used for deduplication.
     public string? IdempotencyKey { get; set; }
 
     public bool Executed { get; set; } = true;
 
-    /// Non-null when this decision was suppressed by the priority engine.
     public string? SuppressedBy { get; set; }
 
-    /// Snapshot of the context at decision time (weather, AQI, child state).
     public string? ContextSnapshotJson { get; set; }
 
-    /// Reasoning chain that produced the decision (risk factors, escalation logic).
     public string? EscalationRationale { get; set; }
 
     public string? Metadata { get; set; }

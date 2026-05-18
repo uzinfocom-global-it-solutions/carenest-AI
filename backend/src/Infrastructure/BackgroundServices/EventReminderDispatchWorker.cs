@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -50,8 +50,6 @@ public sealed class EventReminderDispatchWorker : BackgroundService
 
         var now = DateTimeOffset.UtcNow;
 
-        // Find events whose reminder window has opened but reminder hasn't been sent yet.
-        // ReminderMinutes defaults to 15 if null.
         var dueEvents = await db.CalendarEvents
             .Include(e => e.Family)
                 .ThenInclude(f => f.Members.Where(m => m.Status == FamilyMemberStatusEnum.Active))
@@ -84,7 +82,6 @@ public sealed class EventReminderDispatchWorker : BackgroundService
                 minutesBefore,
             });
 
-            // Idempotency key: reminder per event per day (avoids duplicate if worker runs late)
             var dayStamp = ev.StartDatetime.UtcDateTime.ToString("yyyyMMdd");
             var idempotencyKey = $"er:{ev.Id}:{dayStamp}";
 
@@ -120,7 +117,6 @@ public sealed class EventReminderDispatchWorker : BackgroundService
 
             if (dispatched)
             {
-                // Mark reminder as sent so it doesn't fire again
                 ev.ReminderSentAt = now;
                 await db.SaveChangesAsync(ct);
 

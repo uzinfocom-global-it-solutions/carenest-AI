@@ -1,4 +1,4 @@
-using Backend.Application.Common.Interfaces;
+﻿using Backend.Application.Common.Interfaces;
 using Backend.Application.Users.Models;
 using Backend.Domain.Entities;
 
@@ -19,8 +19,6 @@ public class GetUserSettingsQueryHandler : IRequestHandler<GetUserSettingsQuery,
 
         if (setting == null)
         {
-            // Self-heal: any authenticated user must have a settings row.
-            // Auto-create on first access if missing (e.g., user predates UserSetting introduction).
             setting = new UserSetting { UserId = request.UserId };
             _context.UserSettings.Add(setting);
             await _context.SaveChangesAsync(cancellationToken);

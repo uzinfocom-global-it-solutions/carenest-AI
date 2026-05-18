@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:app/shared/theme/app_colors.dart';
@@ -14,8 +14,6 @@ import 'package:app/core/localization/app_strings.dart';
 
 enum _VoiceStage { idle, listening, thinking, speaking, awaitingConfirm, error }
 
-// Detects when the AI reply mentions that an action was taken (add/create/schedule).
-// Used to show a "Sync" button even when no formal proposal was returned.
 bool _mentionsAction(String? reply) {
   if (reply == null || reply.isEmpty) return false;
   final t = reply.toLowerCase();
@@ -117,9 +115,6 @@ class _VoiceModalState extends State<VoiceModal> {
     await _beginListening(showAs: _VoiceStage.listening, clearReply: true);
   }
 
-  /// Re-opens the mic without changing the visible stage. Used after the AI
-  /// speaks a proposal, so the awaiting-confirm UI (with Confirm/Not now buttons)
-  /// stays on screen while we listen for a "yes" / "no" in the background.
   Future<void> _listenSilently() async {
     await _beginListening(showAs: null, clearReply: false);
   }
@@ -168,8 +163,6 @@ class _VoiceModalState extends State<VoiceModal> {
   Future<void> _handleTranscript(String text) async {
     if (!mounted) return;
 
-    // If we're awaiting confirmation on a previously-spoken proposal, treat
-    // affirmative/negative replies specially before they get sent to the LLM.
     if (_pendingProposalMessageId != null) {
       if (_isAffirmative(text)) {
         await _confirmPendingProposal();
@@ -179,8 +172,6 @@ class _VoiceModalState extends State<VoiceModal> {
         _dismissPendingProposal();
         return;
       }
-      // Anything else: drop the pending proposal and treat the utterance as a
-      // fresh chat turn.
       _pendingProposal = null;
       _pendingProposalMessageId = null;
     }
@@ -194,7 +185,6 @@ class _VoiceModalState extends State<VoiceModal> {
 
     if (!mounted) return;
 
-    // Find the AI reply (last message from the AI added in this round).
     final newMessages = chat.messages.skip(beforeCount).toList();
     final aiMsg = newMessages
         .cast<ChatMessageModel?>()
@@ -222,8 +212,6 @@ class _VoiceModalState extends State<VoiceModal> {
       }
     });
 
-    // Always refresh data lists — if the AI auto-executed an action the
-    // user must see the result immediately in Family / Plan tabs.
     await refreshAllAfterAiAction(context);
     if (!mounted) return;
 
@@ -235,9 +223,6 @@ class _VoiceModalState extends State<VoiceModal> {
 
     if (!mounted) return;
     if (_pendingProposalMessageId != null) {
-      // Switch to the confirm UI immediately (Confirm/Not now buttons + caption)
-      // and listen for "yes"/"no" in the background WITHOUT overwriting the
-      // visible stage.
       setState(() => _stage = _VoiceStage.awaitingConfirm);
       await _listenSilently();
     }
@@ -246,7 +231,6 @@ class _VoiceModalState extends State<VoiceModal> {
   Future<void> _confirmPendingProposal() async {
     final id = _pendingProposalMessageId;
     if (id == null) return;
-    // Stop the background mic so a stray utterance doesn't double-fire.
     await _voice.cancel();
     if (!mounted) return;
     setState(() => _stage = _VoiceStage.thinking);
@@ -392,7 +376,6 @@ class _Header extends StatelessWidget {
         GestureDetector(
           onTap: () async {
             onClose();
-            // After the modal pops, jump to the text chat tab.
             await Future<void>.delayed(const Duration(milliseconds: 60));
             if (!context.mounted) return;
             context.go('/chat');
@@ -747,8 +730,6 @@ class _FooterForStage extends StatelessWidget {
             ],
           );
         }
-        // AI said it did something (added child/event) but no formal proposal —
-        // show a sync button so the user can refresh the UI immediately.
         if (_mentionsAction(reply)) {
           return Column(
             mainAxisSize: MainAxisSize.min,

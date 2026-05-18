@@ -58,7 +58,6 @@ class FamilyItemsController extends ChangeNotifier {
   bool get loading => _loading;
   String? get error => _error;
 
-  /// Items grouped by category.
   Map<String, List<FamilyItemModel>> get byCategory {
     final map = <String, List<FamilyItemModel>>{};
     for (final item in _items) {
@@ -132,13 +131,11 @@ class FamilyItemsController extends ChangeNotifier {
     if (idx == -1) return;
     final current = _items[idx];
     final newActive = !current.isActive;
-    // Optimistic update
     _items[idx] = current.copyWith(isActive: newActive);
     notifyListeners();
     try {
       await _api.put('/api/v1/family-items/$id', {'isActive': newActive});
     } catch (e) {
-      // Rollback
       _items[idx] = current;
       _error = e.toString();
       debugPrint('[FamilyItems] toggleActive error: $e');

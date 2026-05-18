@@ -1,4 +1,4 @@
-using Backend.Web.Infrastructure;
+﻿using Backend.Web.Infrastructure;
 
 namespace Backend.Web.Endpoints;
 
@@ -24,7 +24,6 @@ public class Tts : IEndpointGroup
 
         lang = string.IsNullOrWhiteSpace(lang) ? "en" : lang;
 
-        // Clamp text to 200 chars to stay within Google TTS limits
         if (text.Length > 200)
             text = text[..200];
 

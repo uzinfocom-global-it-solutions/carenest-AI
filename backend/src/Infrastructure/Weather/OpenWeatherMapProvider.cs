@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Microsoft.Extensions.Configuration;
@@ -6,10 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Backend.Infrastructure.Weather;
 
-/// <summary>
-/// OpenWeatherMap-backed weather provider. AQI/pollen/UV are not in the Free tier — those fields
-/// stay null here. Use a richer provider (AirVisual, Tomorrow.io, etc.) to populate them.
-/// </summary>
 internal sealed class OpenWeatherMapProvider : IWeatherProvider
 {
     private readonly HttpClient _http;

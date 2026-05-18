@@ -1,4 +1,4 @@
-using Backend.Application.Auth.Commands.Register;
+﻿using Backend.Application.Auth.Commands.Register;
 using Backend.Application.Calendar.Commands.CreateCalendarEvent;
 using Backend.Application.Calendar.Commands.DeleteCalendarEvent;
 using Backend.Application.Calendar.Commands.UpdateCalendarEvent;
@@ -37,9 +37,6 @@ public class CalendarFlowTests : TestBase
         var (_, familyB) = await SetupFamilyAsync("cal-iso-b@local");
         var foreignChild = await TestApp.SendAsync(new CreateChildCommand(familyB, "Foreign", 6, "noop"));
 
-        // Alice tries to create an event in HER family but linked to a child from family B.
-        // Authorization must fail before we even get to the cross-family check (Alice isn't a member of B's child path),
-        // but the validator-level check is the safety net we expect to fire.
         var dto = NewEventDto(
             start: DateTimeOffset.UtcNow.AddDays(1),
             end: DateTimeOffset.UtcNow.AddDays(1).AddHours(1)) with

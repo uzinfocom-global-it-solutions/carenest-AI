@@ -1,12 +1,7 @@
-using Backend.Domain.Enums;
+﻿using Backend.Domain.Enums;
 
 namespace Backend.Application.Common.Interfaces;
 
-/// <summary>
-/// Extracts structured child-profile insights (sensitivities, routines, observations)
-/// from free-text input. Default impl is rule-based; can be swapped for an LLM-backed
-/// implementation that uses <see cref="IAiClient"/> without changing callers.
-/// </summary>
 public interface IChildProfileExtractor
 {
     Task<ChildExtractionResult> ExtractAsync(

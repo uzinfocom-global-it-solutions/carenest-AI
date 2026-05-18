@@ -33,21 +33,17 @@ import 'features/notifications/data/push_notification_handler.dart';
 import 'features/notifications/data/local_notification_service.dart';
 import 'features/monitoring/application/monitoring_controller.dart';
 import 'features/monitoring/data/monitoring_service.dart';
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppConfig.load();
   await LocalNotificationService.instance.initialize();
   runApp(const CareNestAiApp());
 }
-
 class CareNestAiApp extends StatefulWidget {
   const CareNestAiApp({super.key});
-
   @override
   State<CareNestAiApp> createState() => _CareNestAiAppState();
 }
-
 class _CareNestAiAppState extends State<CareNestAiApp> {
   late final TokenStorage _tokenStorage;
   late final ApiClient _apiClient;
@@ -66,31 +62,22 @@ class _CareNestAiAppState extends State<CareNestAiApp> {
   late final VoiceService _voiceService;
   late final MonitoringController _monitoringController;
   late final GoRouter _router;
-
   bool _familyChecked = false;
   bool _bootstrappedForFamily = false;
   int? _activeFamilyId;
-
-  // SSE events that arrive before _activeFamilyId is initialised are buffered
-  // here and replayed immediately after family context is ready.
   final _pendingSseEvents = <SseMessage>[];
-
   @override
   void initState() {
     super.initState();
     _tokenStorage = TokenStorage();
     _apiClient = ApiClient(
       tokenProvider: _tokenStorage.getAccessToken,
-      // On 401, try to rotate the refresh token transparently — gives the
-      // 15-minute access token an unlimited extension via the 30-day refresh
-      // token, so the user isn't kicked out mid-conversation.
       refreshToken: () async {
         final refresh = await _tokenStorage.getRefreshToken();
         if (refresh == null) return null;
         try {
           final repo = AuthRepositoryImpl(apiClient: _apiClient);
           final tokens = await repo.refresh(refresh);
-          // Keep existing display name / email — refresh response doesn't carry them.
           final displayName = await _tokenStorage.getDisplayName();
           final email = await _tokenStorage.getEmail();
           await _tokenStorage.saveTokens(
@@ -102,16 +89,13 @@ class _CareNestAiAppState extends State<CareNestAiApp> {
           );
           return tokens.accessToken;
         } catch (_) {
-          return null; // refresh expired/revoked — onUnauthorized will fire
+          return null;
         }
       },
       onUnauthorized: () async {
-        // The server rejected the cached token (e.g. tokens from a previous
-        // dev DB / restart). Wipe local creds so the router bounces to /login.
         await _authController.forceLogout();
       },
     );
-
     _authController = AuthController(
       repository: AuthRepositoryImpl(apiClient: _apiClient),
       tokenStorage: _tokenStorage,
@@ -145,28 +129,18 @@ class _CareNestAiAppState extends State<CareNestAiApp> {
     );
     _sseClient = SseClient(tokenProvider: _tokenStorage.getAccessToken)
       ..events.listen(_onSseEvent);
-
     _lifecycleObserver = AppLifecycleObserver(sseClient: _sseClient)
       ..addResumeCallback(_voiceNotificationController.loadPending)
       ..addResumeCallback(_notificationsController.load);
     WidgetsBinding.instance.addObserver(_lifecycleObserver);
-
     _appSettingsController = AppSettingsController()..load();
     _voiceService = VoiceService();
-
     _router = buildRouter(_authController);
-
-    // Wire push notification taps to the GoRouter so that tapping a
-    // notification always opens /chat, even when the app was terminated.
     NotificationTapRouter.setNavigator((route) => _router.go(route));
-
     _authController.addListener(_onAuthChanged);
     _authController.tryAutoLogin().then((_) => _resolveFamilyAndBootstrap());
   }
-
   void _onSseEvent(SseMessage msg) {
-    // Buffer events that arrive before the family context is ready.
-    // They will be replayed in _replaySseBuffer() once _activeFamilyId is set.
     if (_activeFamilyId == null) {
       debugPrint('[SSE] Buffered (familyId not ready): ${msg.eventType}');
       _pendingSseEvents.add(msg);
@@ -174,11 +148,9 @@ class _CareNestAiAppState extends State<CareNestAiApp> {
     }
     _dispatchSseEvent(msg);
   }
-
   void _dispatchSseEvent(SseMessage msg) {
     debugPrint('[SSE] Dispatching: ${msg.eventType}');
     _voiceNotificationController.onSseEvent(msg.eventType, msg.json ?? {});
-
     switch (msg.eventType) {
       case 'chat_message_created':
         _chatController.onChatSseEvent(msg.eventType, msg.json ?? {});
@@ -219,7 +191,6 @@ class _CareNestAiAppState extends State<CareNestAiApp> {
         _monitoringController.onSseEvent(msg.eventType, msg.json ?? {});
     }
   }
-
   void _replaySseBuffer() {
     if (_pendingSseEvents.isEmpty) return;
     final events = List<SseMessage>.from(_pendingSseEvents);
@@ -229,7 +200,6 @@ class _CareNestAiAppState extends State<CareNestAiApp> {
       _dispatchSseEvent(msg);
     }
   }
-
   @override
   void dispose() {
     _authController.removeListener(_onAuthChanged);
@@ -240,7 +210,6 @@ class _CareNestAiAppState extends State<CareNestAiApp> {
     VoicePlaybackOrchestrator.instance.dispose();
     super.dispose();
   }
-
   void _onAuthChanged() {
     if (!_authController.isAuthenticated) {
       _familyChecked = false;
@@ -262,18 +231,11 @@ class _CareNestAiAppState extends State<CareNestAiApp> {
   Future<void> _resolveFamilyAndBootstrap() async {
     if (!_authController.isAuthenticated) return;
 
-    // 1) Ask the backend whether this user already has a family, so we route to
-    //    home directly instead of asking returning users to "create one".
-    //    Skipped for returning users — tryAutoLogin() already resolved family
-    //    from secure storage, so there's no need to block on a network call.
     if (!_familyChecked) {
       _familyChecked = true;
       if (_authController.familyResolved) {
-        // Returning user: family already confirmed from local cache — skip the
-        // round-trip to /families/mine so the router reaches /home instantly.
         debugPrint('[Bootstrap] Family resolved from cache — skipping getMyFamily()');
       } else {
-        // New login or no cached familyId: must ask the backend.
         try {
           final family = await _onboardingController.service.getMyFamily();
           await _authController.markFamilyResolved(family?.id);
@@ -282,38 +244,26 @@ class _CareNestAiAppState extends State<CareNestAiApp> {
         }
       }
     }
-
     if (!_authController.hasFamily) return;
     if (_bootstrappedForFamily) return;
     _bootstrappedForFamily = true;
-
     _sseClient.connect();
-
     final familyId = await _tokenStorage.getFamilyId();
     if (familyId == null) return;
     _activeFamilyId = familyId;
     debugPrint('[App] familyId initialised: $familyId — replaying SSE buffer');
     _replaySseBuffer();
-
-    // GPS with 3-second timeout so a slow fix doesn't block the whole bootstrap.
     final locationFuture = LocationService()
         .getLocation()
         .timeout(const Duration(seconds: 3), onTimeout: () => null)
         .catchError((_) => null);
-
-    // Resolve existing chat ID from storage while other requests are in-flight.
     final existingChatIdFuture = _tokenStorage.getActiveChatId();
-
-    // All independent data loads in parallel — cuts boot time significantly.
     await Future.wait([
       _onboardingController.loadFromStorage(),
       _childrenController.loadForFamily(familyId),
       _childrenController.loadRoutinesForFamily(familyId),
       _calendarController.loadWeek(familyId),
     ]);
-
-    // Weather: fire-and-forget — never block navigation on a weather fetch.
-    // The controller notifies listeners when it completes.
     final location = await locationFuture;
     if (location != null) {
       _weatherController.load(
@@ -324,10 +274,8 @@ class _CareNestAiAppState extends State<CareNestAiApp> {
     } else {
       _weatherController.load('home', lat: 41.2995, lon: 69.2401);
     }
-    // Keep weather fresh with a background timer (every 30 min).
     _weatherController.startPeriodicRefresh();
 
-    // Chat history + secondary data in parallel, don't await weather (non-blocking).
     final existingChatId = await existingChatIdFuture;
     if (existingChatId != null) {
       await _chatController.loadHistory(existingChatId);
@@ -340,7 +288,6 @@ class _CareNestAiAppState extends State<CareNestAiApp> {
     }
     _chatController.startPolling();
 
-    // Secondary data — don't block navigation on these.
     Future.wait([
       _recommendationsController.loadForChildren(_childrenController.children),
       _notificationsController.load(),
@@ -348,7 +295,6 @@ class _CareNestAiAppState extends State<CareNestAiApp> {
       _monitoringController.loadForFamily(familyId),
     ]);
   }
-
   @override
   Widget build(BuildContext context) {
     return MultiProvider(

@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Backend.Application.Common.Interfaces;
@@ -8,7 +8,6 @@ namespace Backend.Infrastructure.Services;
 
 public sealed class SseConnectionManager : ISseConnectionManager
 {
-    // userId -> list of channels (one per active connection)
     private readonly ConcurrentDictionary<string, ConcurrentBag<Channel<SseEvent>>> _connections = new();
     private readonly ILogger<SseConnectionManager> _logger;
 
@@ -39,7 +38,6 @@ public sealed class SseConnectionManager : ISseConnectionManager
         }
         finally
         {
-            // Remove this channel from the bag; bags don't support removal so we rebuild
             var remaining = bag.Where(c => !ReferenceEquals(c, channel)).ToList();
             if (remaining.Count == 0)
                 _connections.TryRemove(userId, out _);
@@ -65,7 +63,6 @@ public sealed class SseConnectionManager : ISseConnectionManager
 
     public async Task PublishToFamilyAsync(int familyId, SseEvent evt, CancellationToken ct = default)
     {
-        // Family members are resolved by the callers who have DB access; they call PublishAsync per user
         await Task.CompletedTask;
     }
 

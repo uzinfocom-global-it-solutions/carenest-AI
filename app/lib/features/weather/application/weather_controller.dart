@@ -12,10 +12,8 @@ class WeatherController extends ChangeNotifier {
   WeatherModel? weather;
   String? error;
 
-  // Request versioning: only the latest load wins.
   int _loadVersion = 0;
 
-  // Periodic refresh — keeps weather current without user pull-to-refresh.
   Timer? _refreshTimer;
   String? _lastLocationKey;
   double? _lastLat;
@@ -52,7 +50,6 @@ class WeatherController extends ChangeNotifier {
     }
   }
 
-  /// Silently refresh in the background — does not set isLoading.
   Future<void> _silentRefresh() async {
     final key = _lastLocationKey;
     if (key == null) return;
@@ -69,8 +66,6 @@ class WeatherController extends ChangeNotifier {
     }
   }
 
-  /// Starts a periodic background refresh every [interval] (default 30 min).
-  /// Call once after the first successful load.
   void startPeriodicRefresh({Duration interval = const Duration(minutes: 30)}) {
     _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(interval, (_) => _silentRefresh());

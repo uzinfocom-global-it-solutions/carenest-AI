@@ -13,8 +13,6 @@ class LocationResult {
 }
 
 class LocationService {
-  /// Requests location permission and returns the current device position.
-  /// Returns null if permission is denied or location services are off.
   Future<LocationResult?> getLocation() async {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return null;
@@ -34,7 +32,6 @@ class LocationService {
         ),
       );
 
-      // Build a stable cache key from rounded coordinates (1 decimal = ~11 km)
       final lat = (position.latitude * 10).round() / 10;
       final lon = (position.longitude * 10).round() / 10;
       final latStr = lat.toStringAsFixed(1).replaceAll('-', 'n').replaceAll('.', 'p');
@@ -51,7 +48,6 @@ class LocationService {
     }
   }
 
-  /// Checks permission status without requesting it.
   Future<bool> hasPermission() async {
     final permission = await Geolocator.checkPermission();
     return permission == LocationPermission.always ||

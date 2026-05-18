@@ -12,14 +12,12 @@ class MonitoringController extends ChangeNotifier {
   bool _loading = false;
   String? _error;
 
-  // Test mode
   bool _testModeEnabled = false;
   bool _testModeLoading = false;
   int _testModeInterval = 5;
   double _testModeEventsPerMin = 0;
   String? _testModeError;
 
-  // Request versioning: only the latest load wins.
   int _loadVersion = 0;
 
   List<HealthMonitoringSession> get sessions => _sessions;

@@ -8,7 +8,7 @@ class AIFeedItem {
   final String content;
   final String eventType;
   final String? correlationId;
-  final String status; // 'Pending' | 'Confirmed' | 'Skipped'
+  final String status;
   final DateTime createdAt;
 
   const AIFeedItem({
@@ -22,7 +22,6 @@ class AIFeedItem {
   });
 
   factory AIFeedItem.fromJson(Map<String, dynamic> json) {
-    // Parse proactive intent fields from parsedIntent JSON string
     String eventType = 'ProactiveRecommendation';
     String? correlationId;
     String status = 'Pending';
@@ -79,7 +78,6 @@ class AIFeedController extends ChangeNotifier {
         _items = result
             .map((e) => AIFeedItem.fromJson(e as Map<String, dynamic>))
             .toList();
-        // Sort newest first
         _items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       }
     } catch (e) {
@@ -93,7 +91,6 @@ class AIFeedController extends ChangeNotifier {
 
   void onSseEvent(String eventType, Map<String, dynamic> data) {
     if (eventType == 'chat_message_created') {
-      // Reload feed when a new proactive message arrives
       load();
     }
   }

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:app/shared/theme/app_colors.dart';
@@ -24,7 +24,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   final _scrollController = ScrollController();
   final _inputController = TextEditingController();
 
-  // Highlight animation state for deep-linked messages.
   int? _highlightedMessageId;
 
   @override
@@ -33,7 +32,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToBottom();
-      // Handle pending deep-link from notification tap.
       final pendingId =
           NotificationDeepLinkHandler.instance.pendingScrollToMessageId;
       if (pendingId != null) {
@@ -50,7 +48,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final idx = messages.indexWhere((m) => m.id == messageId);
     if (idx == -1 || !_scrollController.hasClients) return;
 
-    // Estimate item height to compute approximate scroll offset.
     final itemHeight = 80.0;
     final offset = (idx * itemHeight).clamp(
       _scrollController.position.minScrollExtent,
@@ -79,8 +76,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Refresh messages when user comes back to the app so any proactive
-      // AI messages written by background workers appear immediately.
       context.read<ChatController>().refreshOnResume();
     }
   }
@@ -238,7 +233,6 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          // Quick switch to voice mode.
           GestureDetector(
             onTap: () => context.push('/voice'),
             child: Container(
@@ -496,7 +490,6 @@ class _ProposalCard extends StatelessWidget {
                   onTap: disabled
                       ? null
                       : () {
-                          // "Cancel" just dismisses visually — the message stays in history.
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
@@ -601,7 +594,6 @@ class _ProactiveMessageCard extends StatelessWidget {
     final voiceCtrl = context.watch<VoiceNotificationController>();
     final correlationId = message.correlationId;
 
-    // Find a linked pending voice action by correlationId.
     VoiceActionModel? linkedAction;
     if (correlationId != null) {
       try {
@@ -643,7 +635,6 @@ class _ProactiveMessageCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header row: icon + event type label + AI badge
               Row(
                 children: [
                   Icon(_icon(), size: 15, color: _iconColor()),
@@ -677,7 +668,6 @@ class _ProactiveMessageCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              // Message content
               Text(
                 _displayText(),
                 style: AppTextStyles.bodySmall.copyWith(
@@ -686,12 +676,10 @@ class _ProactiveMessageCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              // Timestamp
               Text(
                 _relativeTime(),
                 style: AppTextStyles.caption,
               ),
-              // Quick action buttons when a voice action is pending
               if (isPending) ...[
                 const SizedBox(height: 10),
                 Row(

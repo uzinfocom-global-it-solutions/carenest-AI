@@ -1,10 +1,9 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 
 namespace Backend.Infrastructure.Identity;
 
 internal sealed class BCryptPasswordHasher : IPasswordHasher<ApplicationUser>
 {
-    // BCrypt work factor. 12 ≈ ~250ms on modern hardware — bumps with Moore's law over time.
     private const int WorkFactor = 12;
 
     public string HashPassword(ApplicationUser user, string password)
@@ -30,7 +29,6 @@ internal sealed class BCryptPasswordHasher : IPasswordHasher<ApplicationUser>
         }
         catch (BCrypt.Net.SaltParseException)
         {
-            // Stored hash is not a BCrypt hash (e.g., legacy PBKDF2). Caller can re-hash on next login.
             return PasswordVerificationResult.Failed;
         }
     }

@@ -1,9 +1,5 @@
-namespace Backend.Application.Common.Interfaces;
+﻿namespace Backend.Application.Common.Interfaces;
 
-/// <summary>
-/// Aggregates all relevant family signals into a single context snapshot
-/// used by morning briefings, proactive AI analysis, and leave-home checklists.
-/// </summary>
 public interface IProactiveContextService
 {
     Task<FamilyProactiveContext> BuildContextAsync(int familyId, CancellationToken ct = default);
@@ -19,7 +15,6 @@ public sealed class FamilyProactiveContext
     public IReadOnlyList<ProactiveChildContext> Children { get; init; } = [];
     public IReadOnlyList<string> ActiveAlerts { get; init; } = [];
 
-    /// <summary>Serialized summary suitable for inclusion in an AI prompt.</summary>
     public string ToPromptContext()
     {
         var sb = new System.Text.StringBuilder();

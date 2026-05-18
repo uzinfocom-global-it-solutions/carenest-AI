@@ -1,13 +1,10 @@
-using Backend.Application.Common.Interfaces;
+﻿using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Backend.Infrastructure.Services;
 
-/// Push notification delivery via SSE.
-/// When the app is connected, SSE delivers instantly.
-/// When offline, VoiceActions are persisted and fetched on next app resume.
 public sealed class LocalPushNotificationService : IPushNotificationService
 {
     private readonly IApplicationDbContext _db;
@@ -32,7 +29,6 @@ public sealed class LocalPushNotificationService : IPushNotificationService
         Dictionary<string, string>? data = null,
         CancellationToken ct = default)
     {
-        // deviceToken is not used — delivery is via SSE
         _logger.LogDebug("[LocalPush] SendAsync title={Title} priority={Priority}", title, priority);
         return true;
     }

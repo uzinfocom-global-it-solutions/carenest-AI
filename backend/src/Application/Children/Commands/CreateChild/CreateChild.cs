@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Backend.Application.Children.Models;
 using Backend.Application.Common.Interfaces;
 using Backend.Application.Common.Security;
@@ -60,10 +60,6 @@ public class CreateChildCommandHandler : IRequestHandler<CreateChildCommand, Chi
     }
 }
 
-/// <summary>
-/// Simple heuristic: Russian female names end in 'а' or 'я';
-/// English female names in a common list. Falls back to null when uncertain.
-/// </summary>
 internal static class GenderDetector
 {
     private static readonly HashSet<string> _femaleEn = new(StringComparer.OrdinalIgnoreCase)
@@ -84,10 +80,8 @@ internal static class GenderDetector
 
         if (_femaleEn.Contains(first)) return "Female";
 
-        // Russian heuristic: feminine names typically end in 'а' or 'я'
         if (first.EndsWith('а') || first.EndsWith('я')) return "Female";
 
-        // Masculine Russian names often end in consonants or й
         if (first.Length > 2 && !first.EndsWith('а') && !first.EndsWith('я')
             && (char.IsLetter(first[^1]) && !"аеёиоуыэюя".Contains(first[^1])))
             return "Male";

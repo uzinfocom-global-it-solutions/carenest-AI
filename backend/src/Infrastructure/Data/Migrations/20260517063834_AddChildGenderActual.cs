@@ -4,10 +4,8 @@
 
 namespace Backend.Infrastructure.Data.Migrations
 {
-    /// <inheritdoc />
     public partial class AddChildGenderActual : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<string>(
@@ -17,7 +15,6 @@ namespace Backend.Infrastructure.Data.Migrations
                 nullable: true);
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(

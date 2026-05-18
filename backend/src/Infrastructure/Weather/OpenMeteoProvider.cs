@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
@@ -6,11 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Backend.Infrastructure.Weather;
 
-/// <summary>
-/// Real weather via Open-Meteo — no API key required, free for non-commercial use.
-/// Uses two endpoints: forecast (temp/wind/uv/condition) + air-quality (AQI/pollen).
-/// If lat/lon are missing, geocodes the locationKey first.
-/// </summary>
 internal sealed class OpenMeteoProvider : IWeatherProvider
 {
     private const string ForecastBase = "https://api.open-meteo.com/v1/forecast";
@@ -53,8 +48,6 @@ internal sealed class OpenMeteoProvider : IWeatherProvider
             "&current=european_aqi,grass_pollen,birch_pollen" +
             "&timezone=auto";
 
-        // The air-quality endpoint is optional — if it fails (e.g. coverage gap) we still want
-        // the temperature reading.
         var forecastTask = _http.GetStringAsync(forecastUrl, cancellationToken);
         var airTask = SafeGetStringAsync(airUrl, cancellationToken);
         var forecast = await forecastTask;
@@ -150,7 +143,6 @@ internal sealed class OpenMeteoProvider : IWeatherProvider
         };
     }
 
-    /// <summary>WMO weather codes → our enum. See https://open-meteo.com/en/docs.</summary>
     private static WeatherConditionEnum MapWmoCode(int code) => code switch
     {
         0 => WeatherConditionEnum.Sunny,

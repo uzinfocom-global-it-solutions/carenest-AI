@@ -1,4 +1,4 @@
-namespace Backend.Domain.Enums;
+﻿namespace Backend.Domain.Enums;
 
 public enum MonitoringIssueType
 {
@@ -43,7 +43,6 @@ public enum MonitoringEscalationLevel
     Emergency = 4
 }
 
-/// Controls the state machine for a HealthMonitoringSession's lifecycle.
 public enum MonitoringLifecyclePhase
 {
     Detected,    // Symptom just logged — initial risk assessment
@@ -55,7 +54,6 @@ public enum MonitoringLifecyclePhase
     Archived     // Historical — no longer active
 }
 
-/// State machine for a single step in a follow-up chain.
 public enum FollowUpChainState
 {
     Pending,      // Scheduled, not yet dispatched

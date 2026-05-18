@@ -17,7 +17,6 @@ public class MappingTests
     [OneTimeSetUp]
     public void OneTimeSetUp()
     {
-        // Minimal logger factory for tests
         _loggerFactory = LoggerFactory.Create(b => b.AddDebug().SetMinimumLevel(LogLevel.Debug));
 
         _configuration = new MapperConfiguration(cfg =>
@@ -48,7 +47,6 @@ public class MappingTests
         if (type.GetConstructor(Type.EmptyTypes) != null)
             return Activator.CreateInstance(type)!;
 
-        // Type without parameterless constructor
         return RuntimeHelpers.GetUninitializedObject(type);
     }
 

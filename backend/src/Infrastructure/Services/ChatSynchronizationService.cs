@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Entities;
 using Backend.Domain.Enums;
@@ -33,10 +33,8 @@ public sealed class ChatSynchronizationService : IChatSynchronizationService
     {
         try
         {
-            // Resolve the MessageTypeEnum based on the proactive message type
             var msgTypeEnum = ResolveMessageType(messageType);
 
-            // Find or create the family's chat
             var chat = await _db.Chats
                 .Where(c => c.FamilyId == familyId)
                 .OrderBy(c => c.CreatedAt)
@@ -44,7 +42,6 @@ public sealed class ChatSynchronizationService : IChatSynchronizationService
 
             if (chat is null)
             {
-                // Get the first family member to be the "created by" user for the chat
                 var creatorUserId = await _db.FamilyMembers
                     .Where(m => m.FamilyId == familyId && m.Status == FamilyMemberStatusEnum.Active)
                     .Select(m => m.UserId)
@@ -69,7 +66,6 @@ public sealed class ChatSynchronizationService : IChatSynchronizationService
                 await _db.SaveChangesAsync(ct);
             }
 
-            // Build ParsedIntent JSON
             var parsedIntent = JsonSerializer.Serialize(new
             {
                 eventType = messageType.ToString(),
@@ -93,7 +89,6 @@ public sealed class ChatSynchronizationService : IChatSynchronizationService
 
             _db.ChatMessages.Add(message);
 
-            // Update chat's UpdatedAt
             chat.UpdatedAt = DateTimeOffset.UtcNow;
 
             await _db.SaveChangesAsync(ct);
@@ -102,7 +97,6 @@ public sealed class ChatSynchronizationService : IChatSynchronizationService
                 "Proactive message saved: family={FamilyId} chat={ChatId} msg={MsgId} type={Type}",
                 familyId, chat.Id, message.Id, messageType);
 
-            // Publish SSE to all active family members
             var memberUserIds = await _db.FamilyMembers
                 .Where(m => m.FamilyId == familyId && m.Status == FamilyMemberStatusEnum.Active)
                 .Select(m => m.UserId)

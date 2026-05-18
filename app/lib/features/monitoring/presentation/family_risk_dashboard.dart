@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../shared/theme/app_colors.dart';
@@ -70,7 +70,6 @@ class _FamilyRiskDashboardState extends State<FamilyRiskDashboard>
   }
 }
 
-// ── Sessions tab ─────────────────────────────────────────────────────────────
 
 class _SessionsTab extends StatelessWidget {
   final MonitoringController ctrl;
@@ -388,7 +387,6 @@ class _EscalationForecast extends StatelessWidget {
   }
 }
 
-// ── AI Decisions tab ──────────────────────────────────────────────────────────
 
 class _DecisionsTab extends StatelessWidget {
   final MonitoringController ctrl;

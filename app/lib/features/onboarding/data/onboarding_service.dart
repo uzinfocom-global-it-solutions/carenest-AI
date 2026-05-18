@@ -14,7 +14,6 @@ class OnboardingService {
     return FamilyInfo.fromJson(json);
   }
 
-  /// Returns the user's active family, or null if they don't belong to one yet.
   Future<FamilyInfo?> getMyFamily() async {
     try {
       final json = await _apiClient.get(ApiConstants.myFamily);

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Backend.Infrastructure.Data;
@@ -10,13 +10,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Backend.Infrastructure.BackgroundServices;
 
-/// AI Test Mode Worker.
-///
-/// When enabled, runs the REAL AI pipeline every IntervalSeconds (default 5s)
-/// for every family, bypassing the priority-engine suppression window so each
-/// cycle always delivers at least one notification.
-///
-/// Uses actual children, calendar events, medications and weather — no synthetic data.
 internal sealed class AiTestModeWorker : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
@@ -103,11 +96,9 @@ internal sealed class AiTestModeWorker : BackgroundService
 
         if (memberIds.Count == 0) return;
 
-        // ── Real context from DB ───────────────────────────────────────────────
         var context  = await contextSvc.BuildContextAsync(familyId, ct);
         var sessions = await monitoringSvc.GetActiveSessionsForFamilyAsync(familyId, ct);
 
-        // ── Real AI decisions (same engine as production) ──────────────────────
         var result  = await decisionEngine.AnalyzeAsync(context, sessions, ct);
         var chainId = result.DecisionChainId ?? Guid.NewGuid().ToString("N")[..12];
 
@@ -117,7 +108,6 @@ internal sealed class AiTestModeWorker : BackgroundService
         var pushSent = 0;
         var sseSent  = 0;
 
-        // ── Execute every decision — NO priority-engine suppression in test mode ──
         var executedThisCycle = new HashSet<string>();
 
         foreach (var decision in result.Decisions)
@@ -127,7 +117,6 @@ internal sealed class AiTestModeWorker : BackgroundService
 
             foreach (var userId in memberIds)
             {
-                // No idempotency key — every test cycle creates a fresh VoiceAction
                 await voiceSvc.CreateAsync(
                     familyId, userId, decision.ActionType,
                     decision.Message, decision.Priority,

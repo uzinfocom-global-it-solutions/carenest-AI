@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Entities;
 using Backend.Domain.Enums;
@@ -6,13 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Backend.Infrastructure.Services;
 
-/// Central AI reasoning engine for CareNestAI.
-///
-/// Single orchestration pipeline:
-///   context → risk scoring → predictive analysis → priority check → decisions → memory
-///
-/// All decisions are deduplicated via IAiPriorityEngine before being returned.
-/// Every executed decision is recorded in AiDecisionLog with full reasoning snapshot.
 public sealed class AiDecisionEngine : IAiDecisionEngine
 {
     private readonly IAiClient _ai;
@@ -45,27 +38,22 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
         var sessionUpdates = new List<SessionRiskUpdate>();
         var predictedRisks = new List<PredictedRisk>();
 
-        // Load family AI memory once — shared across all session evaluations
         var familyMemory = await _memory.GetFamilyMemoryAsync(context.FamilyId, ct);
 
-        // ── 1. Evaluate each active monitoring session ───────────────────────
         foreach (var session in activeSessions)
         {
             var child = context.Children.FirstOrDefault(c => c.ChildId == session.ChildId);
 
-            // Current risk assessment (deterministic rules)
             var risk = _riskScoring.CalculateRisk(
                 session.IssueType, child, context.Weather,
                 session.InitialSymptomDescription,
                 session.FollowUpCount, session.MissedFollowUps,
                 session.Severity);
 
-            // Predictive risk analysis
             var prediction = await _predictive.PredictRiskAsync(
                 session, child, context.Weather, familyMemory, ct);
             predictedRisks.Add(prediction);
 
-            // Session state update
             var previousSeverity = session.Severity;
             var effectiveSeverity = risk.Severity > session.Severity ? risk.Severity : session.Severity;
 
@@ -78,12 +66,10 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
                 false,
                 null));
 
-            // Build context snapshot for decision log
             var contextSnapshot = BuildContextSnapshot(context, session, risk, prediction);
 
             var childName = child?.Name ?? "ребёнок";
 
-            // Critical / Emergency → escalation alert
             if (effectiveSeverity >= MonitoringSeverity.Critical)
             {
                 var urgentMsg = session.IssueType == MonitoringIssueType.Fever
@@ -107,7 +93,6 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
                     DecisionMeta(session, chainId, contextSnapshot)));
             }
 
-            // Predictive risk alert — fires before symptoms worsen
             if (prediction.EscalationProbability > 0.65 &&
                 effectiveSeverity <= MonitoringSeverity.Medium)
             {
@@ -119,7 +104,6 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
                     DecisionMeta(session, chainId, contextSnapshot)));
             }
 
-            // Follow-up due check (within next 2 min)
             if (session.NextFollowUpAt.HasValue &&
                 session.NextFollowUpAt <= DateTimeOffset.UtcNow.AddMinutes(2))
             {
@@ -137,12 +121,10 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
                 }
             }
 
-            // Missed follow-up escalation
             if (session.NextFollowUpAt.HasValue &&
                 session.NextFollowUpAt < DateTimeOffset.UtcNow.AddMinutes(-10) &&
                 session.MissedFollowUps > 0)
             {
-                // Force an overdue check-in message
                 var overdueMsg = $"{childName} не ответил(а) на вопрос о самочувствии. Проверьте состояние ребёнка.";
                 decisions.Add(new AiDecision(
                     AiDecisionType.HealthAlert, overdueMsg,
@@ -151,7 +133,6 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
                     DecisionMeta(session, chainId, contextSnapshot)));
             }
 
-            // Auto-resolve if stabilizing for 3+ check-ins
             if (effectiveSeverity <= MonitoringSeverity.Low &&
                 session.FollowUpCount >= 3 &&
                 session.MissedFollowUps == 0)
@@ -170,7 +151,6 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
                     DecisionMeta(session, chainId, contextSnapshot)));
             }
 
-            // Update AI memory with symptom history
             await _memory.RecordObservationAsync(
                 context.FamilyId,
                 $"symptom:{session.IssueType}:{session.ChildId}",
@@ -178,12 +158,10 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
                 AIMemoryType.SymptomHistory, ct);
         }
 
-        // ── 2. Environmental risk analysis (deterministic) ───────────────────
         if (context.Weather is { } w)
         {
             foreach (var child in context.Children)
             {
-                // Dangerous AQI + respiratory sensitivity
                 if (w.AqiIndex > 150 &&
                     child.Sensitivities.Any(s =>
                         s.Contains("астм", StringComparison.OrdinalIgnoreCase) ||
@@ -216,7 +194,6 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
                         new Dictionary<string, string> { ["childId"] = child.ChildId.ToString(), ["chainId"] = chainId }));
                 }
 
-                // Extreme heat
                 if (w.TemperatureCelsius > 38 &&
                     child.Sensitivities.Any(s =>
                         s.Contains("жар", StringComparison.OrdinalIgnoreCase) ||
@@ -230,7 +207,6 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
                         new Dictionary<string, string> { ["childId"] = child.ChildId.ToString(), ["chainId"] = chainId }));
                 }
 
-                // Severe cold
                 if (w.TemperatureCelsius < 0 &&
                     child.Sensitivities.Any(s =>
                         s.Contains("холод", StringComparison.OrdinalIgnoreCase) ||
@@ -246,7 +222,6 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
             }
         }
 
-        // ── 3. Medication reminders (deterministic, ±10 min window) ─────────
         var now = DateTimeOffset.UtcNow;
         foreach (var med in context.TodayMedications)
         {
@@ -268,10 +243,6 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
             }
         }
 
-        // ── 4. Contextual proactive message — always generated, priority engine handles dedup ──
-        // Runs regardless of whether rule-based decisions exist, so there is always at least
-        // one notification path per cycle. The 30-min suppression window in AiPriorityEngine
-        // prevents spam while ensuring the family sees a fresh message every half-hour.
         if (context.Children.Count > 0)
         {
             string? proactiveMsg = null;
@@ -316,7 +287,6 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
             chainId);
     }
 
-    // ── Private helpers ──────────────────────────────────────────────────────
 
     private static DateTimeOffset? NextFollowUpTime(RiskAssessment risk, HealthMonitoringSession session)
     {
@@ -438,7 +408,6 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
         var now = DateTimeOffset.UtcNow;
         var parts = new List<string>();
 
-        // ── 1. Nearest upcoming event in the next 3 hours ──
         var nextEvent = context.TodayEvents
             .Where(e => e.StartTime > now && e.StartTime <= now.AddHours(3))
             .OrderBy(e => e.StartTime)
@@ -455,7 +424,6 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
             parts.Add($"Скоро событие{who}: «{nextEvent.Title}» — {timeStr}.");
         }
 
-        // ── 2. Next medication due within 2 hours (but not already sent ±10 min) ──
         var nextMed = context.TodayMedications
             .Select(m => (med: m, medTime: new DateTimeOffset(
                 now.Date.Add(m.ScheduleTime.ToTimeSpan()), now.Offset)))
@@ -469,7 +437,6 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
             parts.Add($"Через {minsToMed} мин: {nextMed.med.MedicationName} для {nextMed.med.ChildName}.");
         }
 
-        // ── 3. Weather relevant to children's actual sensitivities ──
         if (context.Weather is { } w)
         {
             foreach (var child in context.Children)
@@ -501,7 +468,6 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
                 }
             }
 
-            // Generic weather without sensitivity match
             if (parts.Count == 0)
             {
                 var allNames = context.Children.Count == 1
@@ -519,11 +485,9 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
             }
         }
 
-        // ── 4. Return combined contextual message if we have anything real ──
         if (parts.Count > 0)
             return string.Join(" ", parts);
 
-        // ── 5. Daily summary based on what's actually in the schedule ──
         var child0 = context.Children[0];
         var eventCount = context.TodayEvents.Count;
         var medCount   = context.TodayMedications.Count;
@@ -538,7 +502,6 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
             return $"Сегодня у {child0.Name}: {string.Join(", ", summaryParts)}. Всё под контролем?";
         }
 
-        // ── 6. Last resort: time-of-day check-in (mentions child by name) ──
         var hour = now.ToLocalTime().Hour;
         return hour switch
         {

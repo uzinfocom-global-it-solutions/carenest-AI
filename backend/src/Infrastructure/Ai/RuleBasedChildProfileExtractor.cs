@@ -1,13 +1,9 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 
 namespace Backend.Infrastructure.Ai;
 
-/// <summary>
-/// Deterministic placeholder extractor — keyword/regex matching.
-/// Swap for an LLM-backed implementation by registering a different IChildProfileExtractor in DI.
-/// </summary>
 internal sealed class RuleBasedChildProfileExtractor : IChildProfileExtractor
 {
     private static readonly Regex SleepTimeRegex = new(
@@ -22,7 +18,6 @@ internal sealed class RuleBasedChildProfileExtractor : IChildProfileExtractor
         var insights = new List<ChildInsight>();
         var lower = text.ToLowerInvariant();
 
-        // Sensitivity matches
         TryAddSensitivity(insights, lower,
             keywords: ["cold", "gets sick when cold", "cold-sensitive", "cold weather"],
             field: nameof(Domain.Entities.ChildSensitivity.ColdSensitive),
@@ -65,7 +60,6 @@ internal sealed class RuleBasedChildProfileExtractor : IChildProfileExtractor
             description: "Wind/cold trigger detected — flagged as respiratory.",
             confidence: 0.65);
 
-        // Routine: sleep time
         var sleepMatch = SleepTimeRegex.Match(text);
         if (sleepMatch.Success && TryParseTime(sleepMatch, out var sleepTime))
         {
@@ -98,7 +92,6 @@ internal sealed class RuleBasedChildProfileExtractor : IChildProfileExtractor
         if (!keywords.Any(loweredText.Contains))
             return;
 
-        // De-duplicate same-field insights — keep the highest-confidence match.
         var existing = sink.FindIndex(i => i.Sensitivity?.Field == field);
         if (existing >= 0)
         {

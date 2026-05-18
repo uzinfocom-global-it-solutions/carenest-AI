@@ -1,14 +1,10 @@
-using Backend.Application.Common.Interfaces;
+﻿using Backend.Application.Common.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Backend.Infrastructure.BackgroundServices;
 
-/// <summary>
-/// Drives <see cref="INotificationService.RetryFailedAsync"/> on a tight schedule so failed pushes
-/// don't sit forever. Capped retry count is enforced inside the service itself.
-/// </summary>
 internal sealed class NotificationRetryWorker : PeriodicBackgroundService
 {
     private readonly TimeSpan _interval;

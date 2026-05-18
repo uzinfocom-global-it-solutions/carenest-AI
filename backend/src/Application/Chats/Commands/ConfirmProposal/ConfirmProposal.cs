@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 using Backend.Application.Common.Exceptions;
 using Backend.Application.Calendar.Commands.CreateCalendarEvent;
@@ -18,11 +18,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Application.Chats.Commands.ConfirmProposal;
 
-/// <summary>
-/// Executes a previously-proposed action attached to an AI chat message.
-/// The proposal is read from the message's parsedIntent JSON and dispatched
-/// to the matching MediatR command. The chat receives a confirmation reply.
-/// </summary>
 public record ConfirmProposalCommand(
     int ChatId,
     int MessageId,
@@ -95,7 +90,6 @@ public class ConfirmProposalCommandHandler : IRequestHandler<ConfirmProposalComm
         chat.UpdatedAt = DateTimeOffset.UtcNow;
         await _context.SaveChangesAsync(ct);
 
-        // Notify all active family members via SSE so Flutter refreshes the affected list instantly.
         if (sseEventType is not null && ssePayload is not null)
         {
             var memberIds = await _context.FamilyMembers
@@ -143,8 +137,6 @@ public class ConfirmProposalCommandHandler : IRequestHandler<ConfirmProposalComm
 
     private static (string? type, string paramsJson) ExtractProposal(string parsedIntent, string? edits)
     {
-        // The proposal lives at $.proposal in the LLM JSON. The caller may also pass a `edits` JSON
-        // string that overrides the params (so the user can adjust before confirming).
         try
         {
             using var doc = JsonDocument.Parse(parsedIntent);

@@ -34,7 +34,6 @@ class NotificationsController extends ChangeNotifier {
     if (idx < 0) return;
     final current = items[idx];
     if (!current.isUnread) return;
-    // Optimistic update — replace in place so the unread badge drops instantly.
     items[idx] = NotificationModel(
       id: current.id,
       recommendationId: current.recommendationId,
@@ -51,9 +50,7 @@ class NotificationsController extends ChangeNotifier {
     notifyListeners();
     try {
       await _service.markRead(id);
-    } catch (_) {
-      // best-effort — leave optimistic state to avoid UI flapping
-    }
+    } catch (_) {}
   }
 
   Future<void> markAllRead() async {

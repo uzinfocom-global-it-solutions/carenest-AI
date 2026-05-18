@@ -1,4 +1,4 @@
-using Backend.Application.Common.Interfaces;
+﻿using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -22,7 +22,6 @@ public sealed class ProactiveContextService : IProactiveContextService
         var todayStart = now.Date;
         var todayEnd = todayStart.AddDays(1);
 
-        // --- Children & sensitivities ---
         var children = await _db.Children
             .Include(c => c.Sensitivity)
             .Where(c => c.FamilyId == familyId)
@@ -50,7 +49,6 @@ public sealed class ProactiveContextService : IProactiveContextService
         var childIds = children.Select(c => c.Id).ToList();
         var childNameMap = children.ToDictionary(c => c.Id, c => c.DisplayName);
 
-        // --- Weather (latest snapshot for this family's location) ---
         ProactiveWeatherContext? weatherCtx = null;
         var snap = await _db.WeatherSnapshots
             .Where(w => w.CollectedAt >= now.AddHours(-2))
@@ -85,7 +83,6 @@ public sealed class ProactiveContextService : IProactiveContextService
             };
         }
 
-        // --- Today's medication schedules ---
         var todayDayOfWeek = now.DayOfWeek;
         var medications = await _db.MedicationSchedules
             .Where(m => childIds.Contains(m.ChildId) && m.IsActive)
@@ -104,7 +101,6 @@ public sealed class ProactiveContextService : IProactiveContextService
             .OrderBy(m => m.ScheduleTime)
             .ToList();
 
-        // --- Today's calendar events ---
         var events = await _db.CalendarEvents
             .Where(e => e.FamilyId == familyId &&
                         e.StartDatetime >= now &&
@@ -124,7 +120,6 @@ public sealed class ProactiveContextService : IProactiveContextService
             Location = e.LocationLabel,
         }).ToList();
 
-        // --- Active alerts ---
         var alerts = new List<string>();
         if (weatherCtx?.AqiIndex > 150)
             alerts.Add($"Критический AQI ({weatherCtx.AqiIndex}) — оставайтесь дома или используйте маску");

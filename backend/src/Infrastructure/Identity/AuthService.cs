@@ -1,4 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -50,7 +50,6 @@ public class AuthService : IAuthService
             throw new Application.Common.Exceptions.ValidationException(errors);
         }
 
-        // Auto-create default settings for the new user.
         _context.UserSettings.Add(new UserSetting { UserId = user.Id });
         await _context.SaveChangesAsync(ct);
 
@@ -65,7 +64,6 @@ public class AuthService : IAuthService
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null || !await _userManager.CheckPasswordAsync(user, password))
         {
-            // Audit failed attempt against the user when known so brute-force is visible per-account.
             if (user != null)
             {
                 await _audit.LogAsync(user.Id, "user.login_failed", "user", null,

@@ -1,4 +1,4 @@
-using Backend.Application.Common.Exceptions;
+﻿using Backend.Application.Common.Exceptions;
 using Backend.Application.Common.Interfaces;
 using Backend.Application.Common.Security;
 using Backend.Domain.Entities;
@@ -53,7 +53,6 @@ public class RemoveMemberCommandHandler : IRequestHandler<RemoveMemberCommand>
                 throw new ConflictException("Cannot remove the last active parent of the family.");
         }
 
-        // Soft-disable: keep the row for audit/history; FamilyAuthorization filters on Status==Active.
         member.Status = FamilyMemberStatusEnum.Disabled;
         await _context.SaveChangesAsync(cancellationToken);
 

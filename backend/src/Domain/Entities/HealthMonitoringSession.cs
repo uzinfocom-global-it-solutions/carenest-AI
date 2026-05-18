@@ -1,4 +1,4 @@
-using Backend.Domain.Enums;
+﻿using Backend.Domain.Enums;
 
 namespace Backend.Domain.Entities;
 
@@ -20,7 +20,6 @@ public class HealthMonitoringSession
     public DateTimeOffset? LastInteractionAt { get; set; }
     public DateTimeOffset? NextFollowUpAt { get; set; }
 
-    // Stores the ordered JSON array of FollowUpStep: [{minutesFromStart, question, expectedSeverity}]
     public string? MonitoringPlanJson { get; set; }
 
     public string? InitialSymptomDescription { get; set; }
@@ -33,21 +32,15 @@ public class HealthMonitoringSession
     public bool IsResolved { get; set; }
     public DateTimeOffset? ResolvedAt { get; set; }
 
-    // State machine lifecycle
     public MonitoringLifecyclePhase LifecyclePhase { get; set; } = MonitoringLifecyclePhase.Detected;
 
-    // Orchestration correlation — all voice actions, decisions, and SSE events
-    // emitted for this session share this chain ID.
     public string? MonitoringChainId { get; set; }
 
-    // Last response from user, semantically analyzed and stored as JSON.
     public string? ResponseAnalysisJson { get; set; }
 
-    // Predictive risk fields updated by PredictiveHealthRiskService.
     public int? PredictedRiskScore { get; set; }
     public DateTimeOffset? PredictedEscalationAt { get; set; }
 
-    // Navigation
     public Family Family { get; set; } = null!;
     public Child? Child { get; set; }
 }

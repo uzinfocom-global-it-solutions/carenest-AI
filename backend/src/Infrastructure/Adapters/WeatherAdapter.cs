@@ -1,4 +1,4 @@
-using Backend.Application.Common.Interfaces;
+﻿using Backend.Application.Common.Interfaces;
 using Backend.Domain.Entities;
 using Backend.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -6,14 +6,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Backend.Infrastructure.Adapters;
 
-/// <summary>
-/// Orchestrates: DB lookup (staleness window) → IWeatherProvider call → persistence.
-/// External-data details live in the IWeatherProvider implementation; this class only
-/// knows how to read/write WeatherSnapshot rows.
-/// </summary>
 public class WeatherAdapter : IWeatherAdapter
 {
-    // Snapshots fresher than this are considered usable for read-paths.
     private static readonly TimeSpan StalenessThreshold = TimeSpan.FromMinutes(30);
 
     private readonly IApplicationDbContext _context;
@@ -50,7 +44,6 @@ public class WeatherAdapter : IWeatherAdapter
         }
         catch (Exception ex)
         {
-            // Log at Error so a missing/invalid API key is immediately visible in logs.
             _logger.LogError(ex,
                 "[Weather] Provider FAILED for key={Key} lat={Lat} lon={Lon} — storing fallback 20°C. " +
                 "Check Weather:ApiKey in appsettings.",

@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Web.Infrastructure;
@@ -33,13 +33,11 @@ public class Sse : IEndpointGroup
         ctx.Response.Headers.Append("Cache-Control", "no-cache");
         ctx.Response.Headers.Append("Connection", "keep-alive");
         ctx.Response.Headers.Append("X-Accel-Buffering", "no");
-        // Tell browser/proxy to retry after 3 seconds on disconnect
         ctx.Response.Headers.Append("Access-Control-Allow-Origin", "*");
 
         var lastEventId = ctx.Request.Headers["Last-Event-ID"].FirstOrDefault();
         var eventCounter = long.TryParse(lastEventId, out var lastId) ? lastId : 0L;
 
-        // Heartbeat task: keeps alive through proxies and NAT timeouts
         using var heartbeatTimer = new PeriodicTimer(TimeSpan.FromSeconds(25));
         _ = Task.Run(async () =>
         {
@@ -55,7 +53,6 @@ public class Sse : IEndpointGroup
             }
         }, ct);
 
-        // Connected event — client knows it's live
         eventCounter++;
         await WriteEventAsync(ctx.Response, "connected",
             JsonSerializer.Serialize(new { userId, ts = DateTimeOffset.UtcNow }),
@@ -85,10 +82,8 @@ public class Sse : IEndpointGroup
         var sb = new StringBuilder();
         if (id is not null) sb.AppendLine($"id: {id}");
         sb.AppendLine($"event: {eventType}");
-        // SSE spec: each line of data gets its own "data:" prefix
         foreach (var line in data.Split('\n'))
             sb.AppendLine($"data: {line}");
-        // Retry hint: tell client to reconnect after 3s if stream drops
         sb.AppendLine("retry: 3000");
         sb.AppendLine();
 

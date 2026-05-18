@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -53,13 +53,11 @@ public class IntentParser : IIntentParser
 
             using var request = new HttpRequestMessage(HttpMethod.Post, url);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _llm.Token);
-            // Оптимизация: Сериализация напрямую в поток без выделения промежуточных строк
             request.Content = JsonContent.Create(requestBody);
 
             using var response = await _httpClient.SendAsync(request, ct);
             response.EnsureSuccessStatusCode();
 
-            // Оптимизация: Чтение из потока вместо ReadAsStringAsync снижает нагрузку на кучу (Heap)
             using var responseStream = await response.Content.ReadAsStreamAsync(ct);
             using var doc = await JsonDocument.ParseAsync(responseStream, cancellationToken: ct);
             
@@ -122,7 +120,6 @@ public class IntentParser : IIntentParser
         var uztOffset = TimeSpan.FromHours(5);
         var nowUzt = DateTime.UtcNow.Add(uztOffset);
 
-        // Блок погоды
         string weather = "not available";
         if (ctx?.Weather is { } w)
         {
@@ -136,7 +133,6 @@ public class IntentParser : IIntentParser
             weather = string.Join(" · ", bits) + $" (updated {w.CollectedAt:HH:mm} UTC)";
         }
 
-        // Профили детей (оптимизировано выделение памяти под StringBuilder)
         string childrenBlock = "  (no children added yet — help the parent add one)";
         if (ctx?.ChildrenDetail is { Count: > 0 } cd)
         {
@@ -166,7 +162,6 @@ public class IntentParser : IIntentParser
             }));
         }
 
-        // Блок событий
         string eventsBlock = "no events scheduled for today or the next 48 hours";
         if (ctx?.UpcomingEvents is { Count: > 0 } ue)
         {
@@ -181,7 +176,6 @@ public class IntentParser : IIntentParser
             }));
         }
 
-        // Последние рекомендации
         string recsBlock = "none recently";
         if (ctx?.RecentRecommendations is { Count: > 0 } rr)
             recsBlock = string.Join("\n", rr.Select(r => $"  • {r}"));
@@ -326,7 +320,6 @@ Also set detected_issue_type to one of: fever|asthma|cough|vomiting|rash|allergy
             }));
         }
 
-        // Блок событий
         var uztOffset = TimeSpan.FromHours(5);
         var nowUzt = DateTime.UtcNow.Add(uztOffset);
         string eventsBlock = "нет событий на сегодня и ближайшие 48 часов";
@@ -343,7 +336,6 @@ Also set detected_issue_type to one of: fever|asthma|cough|vomiting|rash|allergy
             }));
         }
 
-        // Последние рекомендации
         string recsBlock = "недавно не было";
         if (ctx?.RecentRecommendations is { Count: > 0 } rr)
             recsBlock = string.Join("\n", rr.Select(r => $"  • {r}"));
@@ -442,10 +434,8 @@ Also set detected_issue_type to one of: fever|asthma|cough|vomiting|rash|allergy
 
     private static string BuildSystemPromptUnused(IntentContext? context, string locale = "en")
     {
-        // Kept to avoid merge conflicts — the real prompt is now in BuildPromptEn/BuildPromptRu.
         var isRussian = locale.StartsWith("ru", StringComparison.OrdinalIgnoreCase);
 
-        // Build detailed children profile section
         string childrenSection;
         if (context?.ChildrenDetail is { Count: > 0 } details)
         {
@@ -638,7 +628,6 @@ Output format — raw JSON only, no text before or after, no markdown code fence
         if (content == null) return null;
         content = content.Trim();
 
-        // Strip markdown code fences
         if (content.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
             content = content.Substring(7);
         else if (content.StartsWith("```"))
@@ -649,7 +638,6 @@ Output format — raw JSON only, no text before or after, no markdown code fence
         
         content = content.Trim();
 
-        // If model added explanatory text before/after JSON, extract just the JSON object
         var start = content.IndexOf('{');
         var end = content.LastIndexOf('}');
         if (start >= 0 && end > start)
@@ -660,7 +648,6 @@ Output format — raw JSON only, no text before or after, no markdown code fence
 
     private ParsedIntent ParseLlmJson(string? content, IntentContext? context, string originalMessage)
     {
-        // ИСПРАВЛЕНО: Теперь сырой ответ сначала очищается от возможных тегов ```json
         content = StripJsonFence(content);
 
         if (string.IsNullOrWhiteSpace(content)) return FallbackParse(originalMessage, context);
@@ -700,7 +687,6 @@ Output format — raw JSON only, no text before or after, no markdown code fence
             if (root.TryGetProperty("detected_issue_type", out var ditProp) && ditProp.ValueKind == JsonValueKind.String)
                 detectedIssueType = ditProp.GetString();
 
-            // Fallback: detect issue type from reply/topic if LLM didn't classify
             detectedIssueType ??= DetectIssueTypeFromText(reply ?? topic ?? "");
 
             var triggersRec = intent == "recommendation_request" || intent == "weather_query";
@@ -717,7 +703,6 @@ Output format — raw JSON only, no text before or after, no markdown code fence
     {
         var lower = message.ToLower(CultureInfo.InvariantCulture);
 
-        // Try to detect simple action proposals from regex (English + Russian).
         var addChildMatch = Regex.Match(message,
             @"\b(add|create|register|добавь|добавить|создай|зарегистрируй)\s+(my\s+|моего\s+|мою\s+)?(child\s+|kid\s+|son\s+|daughter\s+|сына\s+|дочь\s+|дочку\s+|ребёнка\s+|ребенка\s+)?(?<name>[A-ZА-ЯЁ][a-zA-ZА-ЯЁа-яёa-z'-]{1,30})([,\s]+(age\s+|ему\s+|ей\s+|лет\s+)?(?<age>\d{1,2}))?",
             RegexOptions.IgnoreCase);

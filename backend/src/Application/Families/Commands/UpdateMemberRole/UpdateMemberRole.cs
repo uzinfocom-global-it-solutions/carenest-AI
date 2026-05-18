@@ -1,4 +1,4 @@
-using Backend.Application.Common.Exceptions;
+﻿using Backend.Application.Common.Exceptions;
 using Backend.Application.Common.Interfaces;
 using Backend.Application.Common.Security;
 using Backend.Domain.Entities;
@@ -45,7 +45,6 @@ public class UpdateMemberRoleCommandHandler : IRequestHandler<UpdateMemberRoleCo
 
         if (previousRole == RoleEnum.Parent && newRole != RoleEnum.Parent)
         {
-            // Block demoting the last active parent — there must always be at least one.
             var otherActiveParents = await _context.FamilyMembers
                 .CountAsync(m => m.FamilyId == request.FamilyId
                               && m.UserId != request.TargetUserId

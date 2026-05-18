@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -24,7 +24,6 @@ public abstract class PeriodicBackgroundService : BackgroundService
     {
         _logger.LogInformation("{Service} started, interval={Interval}", ServiceName, Interval);
 
-        // Fire once immediately so the first notification doesn't wait a full interval
         try
         {
             using var scope = _scopeFactory.CreateScope();
@@ -55,7 +54,6 @@ public abstract class PeriodicBackgroundService : BackgroundService
         }
         catch (OperationCanceledException)
         {
-            // Expected on shutdown.
         }
 
         _logger.LogInformation("{Service} stopped", ServiceName);

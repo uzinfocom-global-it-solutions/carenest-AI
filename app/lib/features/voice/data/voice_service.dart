@@ -107,8 +107,6 @@ class VoiceService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── English number → words ─────────────────────────────────────────────────
-
   static const _ones = [
     '', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
     'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen',
@@ -140,14 +138,10 @@ class VoiceService extends ChangeNotifier {
     return n.toString();
   }
 
-  // ── TTS text cleanup ───────────────────────────────────────────────────────
-
   static String _cleanForTts(String text, {required bool isRussian}) {
-    // Remove emojis and non-ASCII (but keep Cyrillic if Russian)
     if (!isRussian) {
       text = text.replaceAll(RegExp(r'[^\x00-\x7F]'), '');
     } else {
-      // For Russian: remove emojis but keep Cyrillic
       text = text.replaceAll(
         RegExp(
           r'[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}'
@@ -157,18 +151,14 @@ class VoiceService extends ChangeNotifier {
         '',
       );
     }
-    // Remove markdown symbols
     text = text.replaceAll(RegExp(r'[*_~`#>\[\]|\\]'), '');
-    // Replace bullet dashes with pause
     text = text.replaceAll(RegExp(r'^\s*-\s+', multiLine: true), ', ');
-    // For English: convert numbers to words (Russian TTS reads digits natively)
     if (!isRussian) {
       text = text.replaceAllMapped(RegExp(r'\b(\d+)\b'), (m) {
         final v = int.tryParse(m.group(1)!);
         return v != null ? _numToWordsEn(v) : m.group(0)!;
       });
     }
-    // Collapse whitespace
     text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
     text = text.replaceAll(RegExp(r'^,\s*'), '').replaceAll(RegExp(r',\s*$'), '');
     return text;

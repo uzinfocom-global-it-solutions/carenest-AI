@@ -1,10 +1,8 @@
-using Backend.Domain.Entities;
+﻿using Backend.Domain.Entities;
 using Backend.Domain.Enums;
 
 namespace Backend.Application.Common.Interfaces;
 
-/// Predicts future risk escalation for an active monitoring session by combining
-/// session age, missed follow-ups, child profile, environmental signals, and AI memory.
 public interface IPredictiveHealthRiskService
 {
     Task<PredictedRisk> PredictRiskAsync(

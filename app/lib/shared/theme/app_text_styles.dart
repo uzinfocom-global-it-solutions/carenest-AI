@@ -4,7 +4,6 @@ import 'app_colors.dart';
 abstract final class AppTextStyles {
   static const String _fontFamily = 'SF Pro Display';
 
-  // Display
   static const TextStyle display = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 28,
@@ -14,7 +13,6 @@ abstract final class AppTextStyles {
     letterSpacing: -0.5,
   );
 
-  // Title
   static const TextStyle titleLarge = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 22,
@@ -41,7 +39,6 @@ abstract final class AppTextStyles {
     height: 1.4,
   );
 
-  // Body
   static const TextStyle bodyLarge = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 16,
@@ -66,7 +63,6 @@ abstract final class AppTextStyles {
     height: 1.45,
   );
 
-  // Label
   static const TextStyle labelLarge = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 15,
@@ -93,7 +89,6 @@ abstract final class AppTextStyles {
     letterSpacing: 0.5,
   );
 
-  // Caption
   static const TextStyle caption = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 12,
@@ -102,7 +97,6 @@ abstract final class AppTextStyles {
     height: 1.4,
   );
 
-  // Button
   static const TextStyle buttonLarge = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 16,
@@ -120,7 +114,6 @@ abstract final class AppTextStyles {
     height: 1.25,
   );
 
-  // Chat
   static const TextStyle chatMessage = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 15,
@@ -136,7 +129,6 @@ abstract final class AppTextStyles {
     height: 1.4,
   );
 
-  // Quick chip
   static const TextStyle chip = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 13,

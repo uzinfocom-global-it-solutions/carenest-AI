@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -172,7 +172,6 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
   }
 }
 
-// ── Edit name + age ───────────────────────────────────────────────────────────
 class _EditCard extends StatefulWidget {
   const _EditCard({required this.child, required this.index});
   final ChildModel child;
@@ -335,7 +334,6 @@ class _InfoRow extends StatelessWidget {
 }
 
 
-// ── Routines ──────────────────────────────────────────────────────────────────
 class _RoutinesCard extends StatelessWidget {
   const _RoutinesCard({required this.routines, required this.strings});
   final List<ChildRoutineModel> routines;
@@ -387,7 +385,6 @@ class _RoutinesCard extends StatelessWidget {
   }
 }
 
-// ── Health Notes / Conditions ─────────────────────────────────────────────────
 class _HealthNotesCard extends StatefulWidget {
   const _HealthNotesCard({required this.childId, required this.notes});
   final int childId;
@@ -480,7 +477,6 @@ class _HealthNotesCardState extends State<_HealthNotesCard> {
             ],
           ),
 
-          // Add form
           if (_adding) ...[
             const SizedBox(height: 14),
             TextField(
@@ -525,7 +521,6 @@ class _HealthNotesCardState extends State<_HealthNotesCard> {
             ),
           ],
 
-          // Health conditions
           if (healthNotes.isNotEmpty) ...[
             const SizedBox(height: 14),
             Text(isRu ? 'БОЛЕЗНИ / АЛЛЕРГИИ' : 'CONDITIONS / ALLERGIES',
@@ -535,7 +530,6 @@ class _HealthNotesCardState extends State<_HealthNotesCard> {
             ...healthNotes.map((n) => _NoteRow(note: n)),
           ],
 
-          // Other notes
           if (otherNotes.isNotEmpty) ...[
             const SizedBox(height: 14),
             Text(isRu ? 'ЗАМЕТКИ' : 'NOTES',
@@ -609,7 +603,6 @@ class _NoteRow extends StatelessWidget {
   }
 }
 
-// ── Voice / Chat callout ──────────────────────────────────────────────────────
 class _VoiceCard extends StatelessWidget {
   const _VoiceCard({required this.childName, required this.onTap, required this.onChat});
   final String childName;

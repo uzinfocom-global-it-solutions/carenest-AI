@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:app/features/auth/data/token_storage.dart';
@@ -32,7 +32,6 @@ class _OnboardingKidsScreenState extends State<OnboardingKidsScreen> {
     TokenStorage().getFamilyId().then((id) {
       if (mounted) setState(() => _familyId = id);
     });
-    // Make sure the children list is fresh in case the user added some earlier.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final id = await TokenStorage().getFamilyId();
       if (id != null && mounted) {

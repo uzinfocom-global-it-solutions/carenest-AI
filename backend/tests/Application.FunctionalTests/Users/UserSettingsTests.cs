@@ -1,4 +1,4 @@
-using Backend.Application.Auth.Commands.Register;
+﻿using Backend.Application.Auth.Commands.Register;
 using Backend.Application.Common.Exceptions;
 using Backend.Application.Users.Commands.UpdateUserSettings;
 using Backend.Application.Users.Models;
@@ -54,7 +54,6 @@ public class UserSettingsTests : TestBase
         updated.QuietHoursEnd.ShouldBe(new TimeOnly(7, 0));
         updated.Timezone.ShouldBe("Europe/Tashkent");
 
-        // Untouched fields keep defaults.
         updated.PreferredInputMode.ShouldBe(InputModeEnum.Text);
         updated.PreferredLanguage.ShouldBe("en");
         updated.ProactiveMode.ShouldBe(ProactiveModeEnum.Balanced);

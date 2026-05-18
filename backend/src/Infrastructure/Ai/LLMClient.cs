@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Backend.Application.Common.Interfaces;
@@ -7,11 +7,6 @@ using Microsoft.Extensions.Options;
 
 namespace Backend.Infrastructure.Ai;
 
-/// <summary>
-/// Chat-completion client for an OpenAI-compatible LLM endpoint (e.g. a vLLM
-/// server). Reads endpoint, token, model, and default temperature from the
-/// "LLM" configuration section.
-/// </summary>
 internal sealed class LLMClient : IAiClient
 {
     private readonly HttpClient _httpClient;

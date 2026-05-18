@@ -1,4 +1,4 @@
-using Backend.Application.Common.Interfaces;
+﻿using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Backend.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -8,16 +8,6 @@ using Microsoft.Extensions.Options;
 
 namespace Backend.Infrastructure.BackgroundServices;
 
-/// <summary>
-/// Runs every 15 minutes. For each family, aggregates the proactive context and
-/// emits VoiceActions for urgent, time-sensitive signals:
-///   - High AQI + air-quality-sensitive child → inhaler reminder
-///   - Rain forecast within 1h + outdoor event → umbrella reminder
-///   - Sub-zero temp + cold-sensitive child → warm clothes reminder
-///   - High UV + UV-sensitive child → sunscreen reminder
-///
-/// Uses idempotency keys so the same alert doesn't repeat within the same hour.
-/// </summary>
 internal sealed class ProactiveVoiceWorker : PeriodicBackgroundService
 {
     public ProactiveVoiceWorker(
@@ -108,7 +98,6 @@ internal sealed class ProactiveVoiceWorker : PeriodicBackgroundService
                 }
             }
 
-            // Save to chat only once per family per alert (if at least one VoiceAction was created)
             if (anyCreated)
             {
                 var msgType = ResolveProactiveChatMessageType(sourceKey);
@@ -137,30 +126,24 @@ internal sealed class ProactiveVoiceWorker : PeriodicBackgroundService
         var w = ctx.Weather;
         if (w is null) return alerts;
 
-        // Rain → umbrella
         if (w.IsRaining || w.RainChancePercent > 60)
             alerts.Add(("Сегодня ожидается дождь. Не забудьте взять зонт.",
                 NotificationPriority.Normal, "weather:rain-umbrella"));
 
-        // High AQI → air-sensitive child
         if (w.AqiIndex > 100 && ctx.Children.Any(c => c.Sensitivities.Contains("качество воздуха")))
             alerts.Add(($"Высокий уровень загрязнения воздуха (AQI {w.AqiIndex}). " +
                         "Чувствительному ребёнку может понадобиться ингалятор.",
                 NotificationPriority.High, "weather:aqi-inhaler"));
 
-        // Very high AQI → stay inside warning
         if (w.AqiIndex > 150)
             alerts.Add(($"Критический AQI ({w.AqiIndex}). Рекомендуется оставаться дома.",
                 NotificationPriority.High, "weather:aqi-critical"));
 
-        // Cold weather + cold-sensitive child
         if (w.TemperatureCelsius < 5 && ctx.Children.Any(c => c.Sensitivities.Contains("холод")))
             alerts.Add(($"Сегодня холодно ({w.TemperatureCelsius:0}°C). " +
                         "Оденьте чувствительного ребёнка теплее.",
                 NotificationPriority.Normal, "weather:cold-warmclothes"));
 
-        // High UV + UV-sensitive child
-        // (UV index not currently in WeatherSnapshot, but we can add future logic here)
 
         return alerts;
     }

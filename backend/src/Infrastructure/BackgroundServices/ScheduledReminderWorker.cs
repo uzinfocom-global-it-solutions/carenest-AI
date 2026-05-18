@@ -1,4 +1,4 @@
-using Backend.Application.Common.Interfaces;
+﻿using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,11 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Backend.Infrastructure.BackgroundServices;
 
-/// <summary>
-/// Runs every 30 seconds. Picks up VoiceActions whose scheduledAt has arrived
-/// (status = Pending, scheduledAt <= now) and enqueues them for immediate dispatch.
-/// This powers the "remind me in X minutes" feature.
-/// </summary>
 internal sealed class ScheduledReminderWorker : PeriodicBackgroundService
 {
     public ScheduledReminderWorker(

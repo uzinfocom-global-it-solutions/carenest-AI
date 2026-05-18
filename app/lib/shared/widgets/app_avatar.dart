@@ -7,8 +7,6 @@ enum ChildAvatarColor {
   violet,
   ai;
 
-  /// Stable rotation of avatar colors by index so kids in a list each get a
-  /// distinct, repeating palette without per-child color storage.
   static ChildAvatarColor forIndex(int index) =>
       index.isEven ? ChildAvatarColor.gold : ChildAvatarColor.violet;
 }

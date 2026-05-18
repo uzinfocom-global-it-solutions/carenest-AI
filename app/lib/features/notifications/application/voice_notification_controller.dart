@@ -160,7 +160,6 @@ class VoiceNotificationController extends ChangeNotifier {
       case 'skip':
         skip(actionId);
       case 'remind_later':
-        // Re-schedule local notification in 15 minutes
         Future.delayed(const Duration(minutes: 15), () => loadPending());
     }
   }

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Backend.Infrastructure.Services;
@@ -66,7 +66,6 @@ public sealed class MedicationSchedulerService : BackgroundService
 
                 if (!ShouldTrigger(schedule, localNow, localTime)) continue;
 
-                // Debounce: don't retrigger if already triggered within last 90 seconds
                 if (schedule.LastTriggeredAt.HasValue &&
                     (now - schedule.LastTriggeredAt.Value).TotalSeconds < 90)
                     continue;
@@ -90,7 +89,6 @@ public sealed class MedicationSchedulerService : BackgroundService
                         dosage = schedule.Dosage,
                     });
 
-                    // Idempotency: same medication+user triggers at most once per hour
                     var idemKey = VoiceActionDeduplicationService.BuildKey(
                         member.UserId, VoiceActionType.MedicationReminder,
                         $"medication:{schedule.Id}", now);
@@ -109,7 +107,6 @@ public sealed class MedicationSchedulerService : BackgroundService
                         ct);
                 }
 
-                // Save proactive message to family chat and emit SSE
                 var slot = schedule.ScheduleTime.ToString("HHmm");
                 await chatSync.SaveProactiveMessageAsync(
                     familyId,
@@ -137,7 +134,6 @@ public sealed class MedicationSchedulerService : BackgroundService
 
     private static bool ShouldTrigger(Domain.Entities.MedicationSchedule schedule, DateTimeOffset localNow, TimeOnly localTime)
     {
-        // Match within 1-minute window
         var diff = Math.Abs((localTime - schedule.ScheduleTime).TotalMinutes);
         if (diff > 1 && diff < 1439) return false; // 1439 = 24h-1min (handles midnight wrap)
 

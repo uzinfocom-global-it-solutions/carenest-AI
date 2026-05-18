@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -6,10 +6,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Backend.Infrastructure.Data.Migrations
 {
-    /// <inheritdoc />
     public partial class AddProactiveAILayer : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -96,7 +94,6 @@ namespace Backend.Infrastructure.Data.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            // Indexes for AIMemories
             migrationBuilder.CreateIndex(
                 name: "IX_AIMemories_FamilyId",
                 table: "AIMemories",
@@ -108,7 +105,6 @@ namespace Backend.Infrastructure.Data.Migrations
                 columns: new[] { "FamilyId", "Key" },
                 unique: true);
 
-            // Indexes for FamilyItems
             migrationBuilder.CreateIndex(
                 name: "IX_FamilyItems_FamilyId",
                 table: "FamilyItems",
@@ -124,7 +120,6 @@ namespace Backend.Infrastructure.Data.Migrations
                 table: "FamilyItems",
                 column: "ChildId");
 
-            // Indexes for LeaveHomeChecklists
             migrationBuilder.CreateIndex(
                 name: "IX_LeaveHomeChecklists_FamilyId",
                 table: "LeaveHomeChecklists",
@@ -136,7 +131,6 @@ namespace Backend.Infrastructure.Data.Migrations
                 columns: new[] { "FamilyId", "Date" });
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(name: "AIMemories");

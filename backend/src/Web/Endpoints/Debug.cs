@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Backend.Infrastructure.Identity;
@@ -16,10 +16,8 @@ public class Debug : IEndpointGroup
 
     public static void Map(RouteGroupBuilder groupBuilder)
     {
-        // Password reset — no auth required (dev only, checked inside handler)
         groupBuilder.MapPost(ResetPassword, "reset-password").AllowAnonymous();
 
-        // Debug endpoints are auth-protected but not rate-limited
         groupBuilder.RequireAuthorization();
 
         groupBuilder.MapPost(PingMe, "ping-me");
@@ -33,15 +31,12 @@ public class Debug : IEndpointGroup
         groupBuilder.MapGet(GetEscalationState, "escalation/state");
         groupBuilder.MapGet(GetSseConnections, "sse/connections");
 
-        // AI Test Mode — stress-test the full production pipeline
         groupBuilder.MapPost(StartTestMode,  "ai/test-mode/start");
         groupBuilder.MapPost(StopTestMode,   "ai/test-mode/stop");
         groupBuilder.MapGet(GetTestModeStatus, "ai/test-mode/status");
 
-        // Weather observability
         groupBuilder.MapGet(GetWeatherStatus, "weather/status");
 
-        // AI Operating System — observability
         groupBuilder.MapGet(GetAiDecisionLog, "ai/decisions");
         groupBuilder.MapGet(GetMonitoringDashboard, "ai/monitoring");
         groupBuilder.MapGet(GetAiMemory, "ai/memory");
@@ -69,7 +64,6 @@ public class Debug : IEndpointGroup
 
         const string text = "Привет! Система CareNestAI работает. Это тестовое голосовое уведомление.";
 
-        // Push via SSE
         var delivered = await push.SendToUserAsync(
             userId, "🔔 CareNestAI — Тест", text, NotificationPriority.High,
             new Dictionary<string, string>
@@ -81,7 +75,6 @@ public class Debug : IEndpointGroup
                 ["priority"] = "high",
             }, ct);
 
-        // VoiceAction (triggers TTS on Flutter)
         Domain.Entities.VoiceAction? action = null;
         if (familyId > 0)
         {
@@ -217,7 +210,6 @@ public class Debug : IEndpointGroup
 
         if (action is null) return Results.NotFound("VoiceAction not found");
 
-        // Force-move delivered time to trigger escalation
         action.DeliveredAt = DateTimeOffset.UtcNow.AddMinutes(-61);
         action.Status = VoiceActionStatus.Delivered;
         action.EscalationStep = 0;

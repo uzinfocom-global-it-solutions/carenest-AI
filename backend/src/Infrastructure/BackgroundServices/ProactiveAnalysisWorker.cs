@@ -1,4 +1,4 @@
-using Backend.Application.Recommendations.Commands.GenerateRecommendations;
+﻿using Backend.Application.Recommendations.Commands.GenerateRecommendations;
 using Backend.Domain.Enums;
 using Backend.Infrastructure.Data;
 using MediatR;
@@ -9,11 +9,6 @@ using Microsoft.Extensions.Options;
 
 namespace Backend.Infrastructure.BackgroundServices;
 
-/// Walks every active child and generates contextual recommendations.
-/// Recommendation generation is the only responsibility of this worker.
-///
-/// Proactive AI chat messages are NOT sent here — they flow exclusively through
-/// ContinuousContextAnalysisWorker to enforce the single orchestration pipeline rule.
 internal sealed class ProactiveAnalysisWorker : PeriodicBackgroundService
 {
     private const string SystemActorId = "system:proactive-analysis";

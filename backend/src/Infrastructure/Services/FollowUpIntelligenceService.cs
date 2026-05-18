@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.RegularExpressions;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Entities;
@@ -8,9 +8,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Backend.Infrastructure.Services;
 
-/// Semantic analysis engine for user responses to health monitoring follow-ups.
-/// Extracts temperature readings, symptom trajectory signals, and criticality indicators.
-/// Drives adaptive follow-up intervals and session lifecycle transitions.
 public sealed class FollowUpIntelligenceService : IFollowUpIntelligenceService
 {
     private readonly IApplicationDbContext _db;
@@ -138,7 +135,6 @@ public sealed class FollowUpIntelligenceService : IFollowUpIntelligenceService
         var severity = session.Severity;
         var followUpIdx = session.FollowUpCount;
 
-        // Derive adaptive interval from current severity
         int severityInterval = severity switch
         {
             MonitoringSeverity.Emergency => 5,
@@ -148,7 +144,6 @@ public sealed class FollowUpIntelligenceService : IFollowUpIntelligenceService
             _                            => 60,
         };
 
-        // Pull next question from the monitoring plan JSON if available
         if (!string.IsNullOrEmpty(session.MonitoringPlanJson))
         {
             try
@@ -221,7 +216,6 @@ public sealed class FollowUpIntelligenceService : IFollowUpIntelligenceService
             .FirstOrDefaultAsync(ct);
     }
 
-    // ── Private helpers ──────────────────────────────────────────────────────
 
     private static SymptomChangeType ClassifySymptomChange(string lowerText)
     {

@@ -1,16 +1,10 @@
-using Backend.Application.Common.Interfaces;
+﻿using Backend.Application.Common.Interfaces;
 using Backend.Application.Recommendations.Models;
 using Backend.Domain.Entities;
 using Backend.Domain.Enums;
 
 namespace Backend.Application.Recommendations.Commands.GenerateEventRecommendation;
 
-/// <summary>
-/// Generates a single proactive nudge tied to a specific upcoming calendar event.
-/// Idempotent: returns null if a recommendation already exists for the event.
-/// Used by the UpcomingEventRecommendationWorker to alert parents about events
-/// starting in the next hour, with "why-this-now" context they can follow up on.
-/// </summary>
 public record GenerateEventRecommendationCommand(
     int CalendarEventId,
     string RequestingUserId) : IRequest<RecommendationResult?>;
@@ -42,12 +36,10 @@ public class GenerateEventRecommendationCommandHandler
             .FirstOrDefaultAsync(e => e.Id == request.CalendarEventId, ct);
         if (ev is null) return null;
 
-        // Dedup: one recommendation per event, ever.
         var alreadyExists = await _context.Recommendations
             .AnyAsync(r => r.CalendarEventId == ev.Id, ct);
         if (alreadyExists) return null;
 
-        // Use the event's child if provided, otherwise pick the first child of the family.
         var childId = ev.ChildId
             ?? await _context.Children
                 .Where(c => c.FamilyId == ev.FamilyId)

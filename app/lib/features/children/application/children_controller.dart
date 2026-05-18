@@ -14,7 +14,6 @@ class ChildrenController extends ChangeNotifier {
   List<ChildRoutineModel> routines = const [];
   int? _lastFamilyId;
 
-  // Request versioning: only the latest load wins.
   int _childrenVersion = 0;
   int _routinesVersion = 0;
 
@@ -74,7 +73,6 @@ class ChildrenController extends ChangeNotifier {
     }
   }
 
-  // ── Per-child notes cache ─────────────────────────────────────────────────
   final Map<int, List<ChildNoteModel>> _notes = {};
 
   List<ChildNoteModel> notesFor(int childId) => _notes[childId] ?? const [];
@@ -100,7 +98,6 @@ class ChildrenController extends ChangeNotifier {
     }
   }
 
-  // ── Per-child sensitivity cache ───────────────────────────────────────────
   final Map<int, ChildSensitivityModel> _sensitivities = {};
 
   ChildSensitivityModel? sensitivityFor(int childId) => _sensitivities[childId];
@@ -173,7 +170,6 @@ class ChildrenController extends ChangeNotifier {
       routines.where((r) => r.isActiveOnDay(day)).toList()
         ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
-  /// Re-fetches the list using the last loaded family id, if any.
   Future<void> refresh() async {
     if (_lastFamilyId != null) {
       await loadForFamily(_lastFamilyId!);

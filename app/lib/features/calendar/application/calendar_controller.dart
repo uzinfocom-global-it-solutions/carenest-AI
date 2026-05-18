@@ -13,7 +13,6 @@ class CalendarController extends ChangeNotifier {
   DateTime _activeWeekStart = _weekStart(DateTime.now());
   int? _lastFamilyId;
 
-  // Request versioning: only the latest load wins.
   int _loadVersion = 0;
 
   DateTime get activeWeekStart => _activeWeekStart;

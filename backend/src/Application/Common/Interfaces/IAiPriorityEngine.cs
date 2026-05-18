@@ -1,14 +1,9 @@
-using Backend.Domain.Enums;
+﻿using Backend.Domain.Enums;
 
 namespace Backend.Application.Common.Interfaces;
 
-/// Central deduplication and suppression engine for AI-generated notifications.
-/// Prevents notification flooding by enforcing cooldown windows per decision type,
-/// priority, family, child, and session.
 public interface IAiPriorityEngine
 {
-    /// Returns whether a decision of the given type should be suppressed
-    /// because a similar one was recently executed within the cooldown window.
     Task<PriorityDecision> EvaluateAsync(
         int familyId,
         AiDecisionType decisionType,
@@ -17,7 +12,6 @@ public interface IAiPriorityEngine
         int? sessionId,
         CancellationToken ct = default);
 
-    /// Persists a decision record. Pass executed=false for suppressed decisions.
     Task RecordDecisionAsync(
         int familyId,
         AiDecisionType decisionType,

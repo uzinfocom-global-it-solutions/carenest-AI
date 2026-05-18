@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:app/shared/theme/app_colors.dart';
@@ -42,7 +42,6 @@ class _FamilyScreenState extends State<FamilyScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Children
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [

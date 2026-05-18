@@ -1,4 +1,4 @@
-using Backend.Application.Calendar.Internal;
+﻿using Backend.Application.Calendar.Internal;
 using Backend.Application.Calendar.Models;
 using Backend.Application.Common.Interfaces;
 using Backend.Application.Common.Security;
@@ -66,9 +66,6 @@ public class CreateCalendarEventCommandHandler : IRequestHandler<CreateCalendarE
         await _audit.LogAsync(request.RequestingUserId, "calendar.event_created", "calendar_event",
             ev.Id, new { request.FamilyId, dto.ChildId, dto.Title }, cancellationToken);
 
-        // If the event starts within the next hour, fire an immediate recommendation
-        // so the parent gets a notification right away (instead of waiting up to 15 min
-        // for the UpcomingEventRecommendationWorker tick).
         var minutesUntil = (ev.StartDatetime - DateTimeOffset.UtcNow).TotalMinutes;
         if (minutesUntil >= 0 && minutesUntil <= 60)
         {

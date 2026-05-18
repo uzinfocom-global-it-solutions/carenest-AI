@@ -1,4 +1,4 @@
-using Backend.Application.Recommendations.Commands.GenerateEventRecommendation;
+﻿using Backend.Application.Recommendations.Commands.GenerateEventRecommendation;
 using Backend.Domain.Enums;
 using Backend.Infrastructure.Data;
 using MediatR;
@@ -9,12 +9,6 @@ using Microsoft.Extensions.Options;
 
 namespace Backend.Infrastructure.BackgroundServices;
 
-/// <summary>
-/// Every UpcomingEventRecommendationInterval, finds upcoming calendar events that start within the
-/// next hour and generates one recommendation per event (deduped by CalendarEventId so the user
-/// never gets the same nudge twice). Runs in addition to ProactiveAnalysisWorker — that one looks
-/// at children/weather/routines, this one is event-window-only.
-/// </summary>
 internal sealed class UpcomingEventRecommendationWorker : PeriodicBackgroundService
 {
     private const string SystemActorId = "system:event-window";
@@ -43,7 +37,6 @@ internal sealed class UpcomingEventRecommendationWorker : PeriodicBackgroundServ
         var now = DateTimeOffset.UtcNow;
         var horizon = now.Add(_lookahead);
 
-        // Pull upcoming events whose family still has at least one active member.
         var upcomingIds = await context.CalendarEvents
             .Where(e => e.StartDatetime >= now
                      && e.StartDatetime <= horizon

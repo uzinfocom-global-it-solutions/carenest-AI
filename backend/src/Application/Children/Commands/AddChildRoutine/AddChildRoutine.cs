@@ -1,4 +1,4 @@
-using Backend.Application.Children.Models;
+﻿using Backend.Application.Children.Models;
 using Backend.Application.Common.Interfaces;
 using Backend.Application.Common.Security;
 using Backend.Domain.Entities;
@@ -68,8 +68,6 @@ public class AddChildRoutineCommandHandler : IRequestHandler<AddChildRoutineComm
         _context.ChildRoutines.Add(routine);
         await _context.SaveChangesAsync(cancellationToken);
 
-        // Materialise the new routine into the calendar immediately for the next 7 days,
-        // so the parent sees it on the Plan screen without waiting for the periodic sync.
         await MaterialiseAsync(_context, routine, child.FamilyId, horizonDays: 7, cancellationToken);
 
         await _audit.LogAsync(request.RequestingUserId, "child.routine_added", "child_routine", routine.Id,

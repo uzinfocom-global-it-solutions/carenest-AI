@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../application/monitoring_controller.dart';
@@ -103,7 +103,6 @@ class _SessionTimeline extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Session header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
@@ -142,7 +141,6 @@ class _SessionTimeline extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // Timeline
           ...events.asMap().entries.map((entry) {
             final isLast = entry.key == events.length - 1;
             return _TimelineRow(event: entry.value, isLast: isLast);

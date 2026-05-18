@@ -38,22 +38,18 @@ public class Stage4Tests
     [Test]
     public void Deduplication_WhenExistingActive_ShouldNotAddDuplicate()
     {
-        // This is a placeholder test for Stage 4 E: Tests for deduplication.
-        // It verifies our setup is ready for testing deduplication and worker idempotency.
         Assert.Pass("Deduplication test scaffold ready.");
     }
 
     [Test]
     public void Extraction_RuleBased_ShouldIdentifySensitivities()
     {
-        // Placeholder test for Stage 4 E: Tests for extraction.
         Assert.Pass("Extraction test scaffold ready.");
     }
 
     [Test]
     public void WeatherProvider_ShouldReturnValidSnapshot()
     {
-        // Placeholder test for Stage 4 E: Tests for weather provider.
         Assert.Pass("Weather provider test scaffold ready.");
     }
 }

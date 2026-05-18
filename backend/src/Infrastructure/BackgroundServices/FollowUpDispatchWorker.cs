@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -7,9 +7,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Backend.Infrastructure.BackgroundServices;
 
-/// Runs every 30 seconds. Dispatches follow-up questions whose scheduled time has arrived.
-/// Only dispatches VoiceActions already created by the orchestration pipeline —
-/// does NOT make new AI decisions. Updates session state and emits SSE after dispatch.
 internal sealed class FollowUpDispatchWorker : PeriodicBackgroundService
 {
     public FollowUpDispatchWorker(
@@ -39,21 +36,18 @@ internal sealed class FollowUpDispatchWorker : PeriodicBackgroundService
 
         if (due.Count == 0) return;
 
-        // Group by family — one chat message per family per dispatch cycle
         var byFamily = due.GroupBy(a => a.FamilyId);
 
         foreach (var group in byFamily)
         {
             var familyId = group.Key;
 
-            // Pick the highest-priority action as the dispatched question
             var lead = group
                 .OrderByDescending(a => (int)a.Priority)
                 .First();
 
             var correlationId = $"followup:{familyId}:{now:yyyyMMddHHmm}";
 
-            // Dispatch the follow-up question to chat
             try
             {
                 await chatSync.SaveProactiveMessageAsync(
@@ -78,12 +72,9 @@ internal sealed class FollowUpDispatchWorker : PeriodicBackgroundService
                 continue;
             }
 
-            // Mark all dispatched actions as Delivered
             foreach (var action in group)
                 action.Status = VoiceActionStatus.Delivered;
 
-            // Update monitoring session follow-up state and emit SSE
-            // Extract relatedSessionId from metadata if available
             foreach (var action in group)
             {
                 if (action.Metadata is null) continue;
@@ -96,7 +87,6 @@ internal sealed class FollowUpDispatchWorker : PeriodicBackgroundService
                     var nextAt = now.AddMinutes(30); // conservative default for un-answered follow-ups
                     await monSvc.MarkFollowUpSentAsync(sessionId, nextAt, ct);
 
-                    // Emit SSE for this family's active members
                     var memberIds = await db.FamilyMembers
                         .Where(m => m.FamilyId == familyId && m.Status == FamilyMemberStatusEnum.Active)
                         .Select(m => m.UserId)
@@ -122,7 +112,6 @@ internal sealed class FollowUpDispatchWorker : PeriodicBackgroundService
                         catch { /* SSE failure must not abort dispatch */ }
                     }
 
-                    // Only process first action per family that has a sessionId
                     break;
                 }
                 catch { /* Metadata parse failure is non-fatal */ }

@@ -4,10 +4,8 @@
 
 namespace Backend.Infrastructure.Data.Migrations
 {
-    /// <inheritdoc />
     public partial class UserSettingTimezone : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
@@ -27,7 +25,6 @@ namespace Backend.Infrastructure.Data.Migrations
                 defaultValue: "UTC");
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(

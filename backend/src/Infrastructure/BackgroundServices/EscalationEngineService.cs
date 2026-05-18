@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -8,16 +8,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Backend.Infrastructure.BackgroundServices;
 
-/// <summary>
-/// Escalates unconfirmed voice actions through 3 steps.
-/// Safety guarantees:
-///   - Step 0→1 after 10 min: resend to original user
-///   - Step 1→2 after 30 min: notify secondary parent
-///   - Step 2→3 after 60 min: emergency broadcast to all family members
-///   - Step 3 is terminal — no further escalation
-///   - Cooldown: never re-process the same action within 8 minutes
-///   - Each step fires at most once per action
-/// </summary>
 public sealed class EscalationEngineService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
@@ -27,7 +17,6 @@ public sealed class EscalationEngineService : BackgroundService
     private static readonly TimeSpan _step1Delay = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan _step2Delay = TimeSpan.FromMinutes(30);
     private static readonly TimeSpan _step3Delay = TimeSpan.FromHours(1);
-    // Minimum time between processing the same action (prevents double-escalation in same cycle)
     private static readonly TimeSpan _perActionCooldown = TimeSpan.FromMinutes(8);
 
     public EscalationEngineService(IServiceScopeFactory scopeFactory, ILogger<EscalationEngineService> logger)
@@ -65,11 +54,6 @@ public sealed class EscalationEngineService : BackgroundService
         var now = DateTimeOffset.UtcNow;
         var cooldownCutoff = now - _perActionCooldown;
 
-        // Only load actions that:
-        // 1. Need escalation
-        // 2. Are delivered but unconfirmed
-        // 3. Have not been escalated within the cooldown window
-        // 4. Have not reached the terminal step (3)
         var candidates = await db.VoiceActions
             .Include(a => a.Family)
             .ThenInclude(f => f.Members.Where(m => m.Status == FamilyMemberStatusEnum.Active))
@@ -149,7 +133,6 @@ public sealed class EscalationEngineService : BackgroundService
         var secondary = action.Family.Members.FirstOrDefault(m => m.UserId != action.UserId);
         if (secondary is null)
         {
-            // No secondary member — skip step 2, go straight to step 3 next cycle
             action.EscalationStep = 2;
             action.LastEscalatedAt = now;
             return true;
@@ -193,7 +176,6 @@ public sealed class EscalationEngineService : BackgroundService
         DateTimeOffset now,
         CancellationToken ct)
     {
-        // Terminal step — mark permanently escalated so it won't be processed again
         action.EscalationStep = 3;
         action.LastEscalatedAt = now;
         action.Status = VoiceActionStatus.Escalated;

@@ -6,10 +6,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Backend.Infrastructure.Data.Migrations
 {
-    /// <inheritdoc />
     public partial class AddNotificationInfrastructure : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -150,7 +148,6 @@ namespace Backend.Infrastructure.Data.Migrations
                 columns: new[] { "UserId", "Status" });
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(

@@ -28,11 +28,8 @@ class AppSettingsController extends ChangeNotifier {
   bool get voiceWithNotifications => _voiceWithNotifications;
   bool get isLoaded => _loaded;
 
-  /// BCP-47 locale tag for TTS / STT
   String get ttsLocale => _language == AppLanguage.russian ? 'ru-RU' : 'en-US';
   String get sttLocale => _language == AppLanguage.russian ? 'ru_RU' : 'en_US';
-
-  /// Locale string sent to the backend so the AI responds in the right language
   String get apiLocale => _language == AppLanguage.russian ? 'ru' : 'en';
 
   Future<void> load() async {

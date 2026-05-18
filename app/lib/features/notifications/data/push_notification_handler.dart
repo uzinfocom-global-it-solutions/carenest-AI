@@ -5,12 +5,9 @@ import '../../voice/data/voice_playback_orchestrator.dart';
 import 'local_notification_service.dart';
 import 'notification_deep_link_handler.dart';
 
-/// Handles incoming push payloads delivered via SSE (push_notification events).
-/// Firebase removed — all delivery is now through SSE + flutter_local_notifications.
 class PushNotificationHandler {
   PushNotificationHandler._();
 
-  /// Called by VoiceNotificationController when SSE delivers a push_notification event.
   static Future<void> handleSseMessage(Map<String, dynamic> data) async {
     debugPrint('[Push][SSE] type=${data['type']} priority=${data['priority']}');
 

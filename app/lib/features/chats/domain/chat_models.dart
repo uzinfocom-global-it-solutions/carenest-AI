@@ -24,8 +24,6 @@ class ChatModel {
   );
 }
 
-/// Structured action the AI proposed in a `Proposal` chat message. The chat UI
-/// renders a confirmation card from these fields and POSTs to the confirm endpoint.
 class ChatProposal {
   const ChatProposal({
     required this.type,

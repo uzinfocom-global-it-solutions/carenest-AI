@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -7,18 +7,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Backend.Infrastructure.BackgroundServices;
 
-/// The autonomous heartbeat of CareNestAI. Runs every 5 minutes.
-///
-/// Single orchestration pipeline per family:
-///   context update → risk scoring → predictive analysis → AI decisions
-///   → priority deduplication (DB + in-cycle) → voice actions → SSE publish
-///   → memory → observability log
-///
-/// Families are processed in parallel (max 4 concurrent) for performance.
-/// All decisions flow through ONE centralized chain — no parallel independent systems.
 internal sealed class ContinuousContextAnalysisWorker : PeriodicBackgroundService
 {
-    // Maximum families processed in parallel — prevents overwhelming the DB
     private const int MaxConcurrency = 4;
 
     public ContinuousContextAnalysisWorker(
@@ -42,7 +32,6 @@ internal sealed class ContinuousContextAnalysisWorker : PeriodicBackgroundServic
             await semaphore.WaitAsync(ct);
             try
             {
-                // Each family gets its own DI scope so EF contexts don't bleed across families
                 using var scope = services.GetRequiredService<IServiceScopeFactory>().CreateScope();
                 await RunFamilyOrchestrationAsync(familyId, scope.ServiceProvider, ct);
             }
@@ -81,11 +70,9 @@ internal sealed class ContinuousContextAnalysisWorker : PeriodicBackgroundServic
 
         if (memberIds.Count == 0) return;
 
-        // ── Step 1: Build full family context ───────────────────────────────
         var context  = await contextSvc.BuildContextAsync(familyId, ct);
         var sessions = await monitoringSvc.GetActiveSessionsForFamilyAsync(familyId, ct);
 
-        // ── Step 2: Predictive analysis on all sessions ─────────────────────
         var familyMemory = await db.AIMemories
             .Where(m => m.FamilyId == familyId && (m.ExpiresAt == null || m.ExpiresAt > DateTimeOffset.UtcNow))
             .OrderByDescending(m => m.RelevanceScore)
@@ -145,11 +132,9 @@ internal sealed class ContinuousContextAnalysisWorker : PeriodicBackgroundServic
             }
         }
 
-        // ── Step 3: AI Decision Engine ──────────────────────────────────────
         var result  = await decisionEngine.AnalyzeAsync(context, sessions, ct);
         var chainId = result.DecisionChainId ?? Guid.NewGuid().ToString("N")[..16];
 
-        // Apply session risk updates from the decision engine
         foreach (var upd in result.SessionUpdates)
         {
             if (upd.ShouldResolve)
@@ -203,14 +188,10 @@ internal sealed class ContinuousContextAnalysisWorker : PeriodicBackgroundServic
             }
         }
 
-        // ── Step 4: Execute decisions through priority engine ────────────────
-        // In-cycle deduplication set — prevents two identical decisions in the same run
-        // from both passing the DB gate (DB hasn't been committed yet for this cycle).
         var executedThisCycle = new HashSet<string>();
 
         foreach (var decision in result.Decisions)
         {
-            // In-cycle dedup key: type + child + session (same as DB dedup key)
             var cycleKey = $"{decision.Type}:{decision.TargetChildId}:{decision.RelatedSessionId}";
 
             if (executedThisCycle.Contains(cycleKey))
@@ -220,7 +201,6 @@ internal sealed class ContinuousContextAnalysisWorker : PeriodicBackgroundServic
                 continue;
             }
 
-            // DB deduplication gate (previous cycles)
             var priorityDecision = await priorityEngine.EvaluateAsync(
                 familyId, decision.Type, decision.Priority,
                 decision.TargetChildId, decision.RelatedSessionId, ct);
@@ -231,7 +211,6 @@ internal sealed class ContinuousContextAnalysisWorker : PeriodicBackgroundServic
                     "Priority engine suppressed {Type} family={FamilyId}: {Reason}",
                     decision.Type, familyId, priorityDecision.SuppressReason);
 
-                // Record suppression in observability log (executed=false, suppressedBy set)
                 await priorityEngine.RecordDecisionAsync(
                     familyId, decision.Type, decision.Message,
                     decision.Priority, decision.TargetChildId, decision.RelatedSessionId,
@@ -244,12 +223,10 @@ internal sealed class ContinuousContextAnalysisWorker : PeriodicBackgroundServic
                 continue;
             }
 
-            // Mark as executed in this cycle before async work to prevent in-cycle duplicates
             executedThisCycle.Add(cycleKey);
 
             var escalationRationale = decision.Metadata?.GetValueOrDefault("severity");
 
-            // Create VoiceAction for every active family member
             foreach (var userId in memberIds)
             {
                 try
@@ -271,7 +248,6 @@ internal sealed class ContinuousContextAnalysisWorker : PeriodicBackgroundServic
                 }
             }
 
-            // Post to family AI chat
             var chatMessageType = decision.Type switch
             {
                 AiDecisionType.EscalationAlert    => ProactiveChatMessageType.EscalationAlert,
@@ -290,7 +266,6 @@ internal sealed class ContinuousContextAnalysisWorker : PeriodicBackgroundServic
                 metadata: decision.Metadata,
                 ct: ct);
 
-            // Update monitoring session follow-up chain state
             if (decision.RelatedSessionId.HasValue &&
                 decision.Type == AiDecisionType.FollowUpCheck &&
                 decision.FollowUp is not null)
@@ -309,7 +284,6 @@ internal sealed class ContinuousContextAnalysisWorker : PeriodicBackgroundServic
                 }, ct);
             }
 
-            // Record in priority engine DB log (for next-cycle deduplication)
             await priorityEngine.RecordDecisionAsync(
                 familyId, decision.Type, decision.Message, decision.Priority,
                 decision.TargetChildId, decision.RelatedSessionId,
@@ -321,7 +295,6 @@ internal sealed class ContinuousContextAnalysisWorker : PeriodicBackgroundServic
                     ? JsonSerializer.Serialize(decision.Metadata) : null,
                 executed: true, ct);
 
-            // Emit ai_decision_created for realtime Flutter AI feed
             await PublishSseAsync(sse, memberIds, "ai_decision_created", new
             {
                 decision = new
@@ -345,7 +318,6 @@ internal sealed class ContinuousContextAnalysisWorker : PeriodicBackgroundServic
                 chainId, familyId, decision.Type, decision.Priority);
         }
 
-        // ── Step 5: Update AI memory ─────────────────────────────────────────
         if (sessions.Count > 0)
         {
             await memorySvc.RecordObservationAsync(
@@ -360,7 +332,6 @@ internal sealed class ContinuousContextAnalysisWorker : PeriodicBackgroundServic
             }, ct);
         }
 
-        // ── Step 6: Emit family context refresh ──────────────────────────────
         await PublishSseAsync(sse, memberIds, "family_context_updated", new
         {
             familyId,

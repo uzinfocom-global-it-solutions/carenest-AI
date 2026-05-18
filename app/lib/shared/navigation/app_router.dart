@@ -45,9 +45,6 @@ GoRouter buildRouter(AuthController auth) {
         return isAuth ? null : '/login';
       }
 
-      // Logged in but the post-auth bootstrap hasn't checked /families/mine yet.
-      // Hold on /splash — never flash /onboarding for a returning user who
-      // already has a family server-side.
       if (!familyResolved) {
         return isSplash ? null : '/splash';
       }
@@ -56,7 +53,6 @@ GoRouter buildRouter(AuthController auth) {
         return hasFamily ? '/home' : '/onboarding';
       }
       if (!hasFamily && !isOnboarding) return '/onboarding';
-      // Family exists — never let the user land back on the onboarding flow.
       if (hasFamily && isOnboarding) return '/home';
       return null;
     },

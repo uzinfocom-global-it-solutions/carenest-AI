@@ -1,4 +1,4 @@
-using Backend.Application.Children.Models;
+﻿using Backend.Application.Children.Models;
 using Backend.Application.Common.Interfaces;
 using Backend.Application.Common.Security;
 using Backend.Domain.Entities;
@@ -14,10 +14,6 @@ public record ExtractFromChatMessageCommand(
 public class ExtractFromChatMessageCommandHandler
     : IRequestHandler<ExtractFromChatMessageCommand, ChildExtractionAppliedResult>
 {
-    /// <summary>
-    /// Threshold above which insights are auto-applied (no human confirmation needed).
-    /// Below this, the note is created with NeedsConfirmation=true and no structured update is performed.
-    /// </summary>
     private const double AutoApplyThreshold = 0.85;
 
     private readonly IApplicationDbContext _context;

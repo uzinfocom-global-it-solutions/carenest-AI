@@ -1,4 +1,4 @@
-using Backend.Application.Common.Interfaces;
+﻿using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Backend.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -9,11 +9,6 @@ using Microsoft.Extensions.Options;
 
 namespace Backend.Infrastructure.BackgroundServices;
 
-/// <summary>
-/// Generates a personalized AI morning briefing for each family once per day.
-/// Runs a tight 1-minute check loop; a per-family record tracks last delivery
-/// so the briefing fires only once per calendar day in the family's local timezone.
-/// </summary>
 public sealed class MorningBriefingService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
@@ -34,7 +29,6 @@ public sealed class MorningBriefingService : BackgroundService
     {
         _logger.LogInformation("MorningBriefingService started, target time={Time}", _targetTime);
 
-        // Track which families already got their briefing today (in-memory, resets on restart — safe)
         var deliveredToday = new HashSet<int>();
 
         while (!stoppingToken.IsCancellationRequested)
@@ -43,7 +37,6 @@ public sealed class MorningBriefingService : BackgroundService
             {
                 var utcNow = DateTimeOffset.UtcNow;
 
-                // Reset delivered set at 2:00 UTC (before any family's morning)
                 if (utcNow.Hour == 2 && utcNow.Minute < 2)
                     deliveredToday.Clear();
 
@@ -70,7 +63,6 @@ public sealed class MorningBriefingService : BackgroundService
         var voiceActionService = scope.ServiceProvider.GetRequiredService<IVoiceActionService>();
         var chatSync = scope.ServiceProvider.GetRequiredService<IChatSynchronizationService>();
 
-        // Get families with their member timezones
         var families = await db.FamilyMembers
             .Where(m => m.Status == FamilyMemberStatusEnum.Active)
             .GroupBy(m => m.FamilyId)
@@ -81,7 +73,6 @@ public sealed class MorningBriefingService : BackgroundService
             })
             .ToListAsync(ct);
 
-        // Use UserSettings to get timezone per family (use first member's timezone)
         var allUserIds = families.SelectMany(f => f.Members.Select(m => m.UserId)).ToList();
         var timezones = await db.UserSettings
             .Where(s => allUserIds.Contains(s.UserId))
@@ -93,7 +84,6 @@ public sealed class MorningBriefingService : BackgroundService
         {
             if (deliveredToday.Contains(family.FamilyId)) continue;
 
-            // Determine local time for this family
             var firstUserId = family.Members.Select(m => m.UserId).FirstOrDefault();
             if (firstUserId is null) continue;
 
@@ -101,7 +91,6 @@ public sealed class MorningBriefingService : BackgroundService
             var localNow = ConvertToLocal(utcNow, tzId);
             var localTime = TimeOnly.FromDateTime(localNow.DateTime);
 
-            // Only trigger within 1-minute window of target time
             var diff = Math.Abs((localTime - _targetTime).TotalMinutes);
             if (diff > 1 && diff < 1439) continue; // 1439 = 24h-1m (midnight wrap)
 
@@ -159,7 +148,6 @@ public sealed class MorningBriefingService : BackgroundService
 
         var date = DateOnly.FromDateTime(now.UtcDateTime);
 
-        // Send to each family member
         foreach (var userId in memberUserIds)
         {
             var idemKey = VoiceActionDeduplicationService.BuildKey(
@@ -179,7 +167,6 @@ public sealed class MorningBriefingService : BackgroundService
                 ct);
         }
 
-        // Save proactive message to family chat and emit SSE
         await chatSync.SaveProactiveMessageAsync(
             familyId,
             briefingText,

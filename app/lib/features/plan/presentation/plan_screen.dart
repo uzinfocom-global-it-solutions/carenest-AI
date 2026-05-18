@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app/shared/theme/app_colors.dart';
 import 'package:app/shared/theme/app_text_styles.dart';
@@ -12,7 +12,6 @@ import 'package:app/core/localization/app_strings.dart';
 import 'package:app/features/settings/application/app_settings_controller.dart';
 import 'package:go_router/go_router.dart';
 
-// ─── Unified timeline item ────────────────────────────────────────────────────
 class _PlanItem {
   final CalendarEventModel? event;
   final ChildRoutineModel? routine;
@@ -34,7 +33,6 @@ class _PlanItem {
   String get sortKey => _sortKey;
 }
 
-// ─── Screen ───────────────────────────────────────────────────────────────────
 class PlanScreen extends StatefulWidget {
   const PlanScreen({super.key});
   @override
@@ -101,7 +99,6 @@ class _PlanScreenState extends State<PlanScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(
                   AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, 8),
@@ -137,7 +134,6 @@ class _PlanScreenState extends State<PlanScreen> {
               ),
             ),
 
-            // Day picker
             Padding(
               padding: const EdgeInsets.fromLTRB(
                   AppSpacing.lg, 6, AppSpacing.lg, 0),
@@ -201,7 +197,6 @@ class _PlanScreenState extends State<PlanScreen> {
 
             const SizedBox(height: 8),
 
-            // Content
             Expanded(
               child: calCtrl.isLoading
                   ? const Center(
@@ -275,7 +270,6 @@ class _PlanScreenState extends State<PlanScreen> {
       a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
-// ─── Add Event bottom sheet ───────────────────────────────────────────────────
 class _AddEventSheet extends StatefulWidget {
   const _AddEventSheet({
     required this.familyId,
@@ -398,7 +392,6 @@ class _AddEventSheetState extends State<_AddEventSheet> {
                 style: AppTextStyles.titleLarge.copyWith(fontSize: 18)),
             const SizedBox(height: 16),
 
-            // Title
             TextField(
               controller: _titleCtrl,
               autofocus: true,
@@ -418,7 +411,6 @@ class _AddEventSheetState extends State<_AddEventSheet> {
             ),
             const SizedBox(height: 12),
 
-            // Child picker
             if (widget.children.isNotEmpty) ...[
               DropdownButtonFormField<int?>(
                 initialValue: _childId,
@@ -444,7 +436,6 @@ class _AddEventSheetState extends State<_AddEventSheet> {
               const SizedBox(height: 12),
             ],
 
-            // Time row
             Row(
               children: [
                 Expanded(
@@ -498,7 +489,6 @@ class _AddEventSheetState extends State<_AddEventSheet> {
             ),
             const SizedBox(height: 12),
 
-            // Reminder picker
             Text(isRu ? 'Напомнить за' : 'Remind before',
                 style: AppTextStyles.bodySmall
                     .copyWith(color: AppColors.textSecondary)),
@@ -534,7 +524,6 @@ class _AddEventSheetState extends State<_AddEventSheet> {
             ),
             const SizedBox(height: 12),
 
-            // Weather sensitive
             Row(
               children: [
                 Text(isRu ? 'Зависит от погоды' : 'Weather sensitive',
@@ -549,7 +538,6 @@ class _AddEventSheetState extends State<_AddEventSheet> {
             ),
             const SizedBox(height: 16),
 
-            // Save button
             SizedBox(
               width: double.infinity,
               child: GestureDetector(
@@ -583,7 +571,6 @@ class _AddEventSheetState extends State<_AddEventSheet> {
   }
 }
 
-// ─── Weather banner ───────────────────────────────────────────────────────────
 class _WeatherBanner extends StatelessWidget {
   const _WeatherBanner({
     required this.temperatureLabel,
@@ -642,7 +629,6 @@ class _WeatherBanner extends StatelessWidget {
   }
 }
 
-// ─── Routine row ──────────────────────────────────────────────────────────────
 class _RoutineRow extends StatelessWidget {
   const _RoutineRow({required this.routine, this.childName});
   final ChildRoutineModel routine;
@@ -753,7 +739,6 @@ class _RoutineRow extends StatelessWidget {
   }
 }
 
-// ─── Event row ────────────────────────────────────────────────────────────────
 class _EventRow extends StatelessWidget {
   const _EventRow({required this.event, this.childName});
   final CalendarEventModel event;

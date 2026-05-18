@@ -24,18 +24,12 @@ class AuthController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _isAuthenticated;
   bool get hasFamily => _hasFamily;
-
-  /// True once the post-auth bootstrap has asked the backend whether this user
-  /// already has a family. The router uses this to avoid flashing /onboarding
-  /// while the answer is in flight (which would happen for any returning user).
   bool get familyResolved => _familyResolved;
 
   String? get error => _error;
   String? get displayName => _displayName;
   String? get email => _email;
 
-  /// Called by the post-auth bootstrap with the backend's verdict. Combines
-  /// the flag flip + family-id persistence so the router only fires one redirect.
   Future<void> markFamilyResolved(int? familyId) async {
     if (familyId == null) {
       await _tokenStorage.clearFamilyId();
@@ -48,8 +42,6 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Reset the resolved flag — called when the cached token starts a session
-  /// so the router waits for the next backend check before deciding the route.
   void invalidateFamilyResolution() {
     if (!_familyResolved) return;
     _familyResolved = false;
@@ -66,23 +58,14 @@ class AuthController extends ChangeNotifier {
         final cachedFamilyId = await _tokenStorage.getFamilyId();
         if (cachedFamilyId != null) {
           _hasFamily = true;
-          // Returning user: family is known from cache — resolve immediately
-          // so the router skips /splash and goes straight to /home.
-          // The bootstrap will still connect SSE and load data in the background.
           _familyResolved = true;
         }
-        // No cached familyId: new user or just registered —
-        // keep _familyResolved = false so the router waits on /splash
-        // until the bootstrap confirms via getMyFamily().
       }
     } finally {
       _setLoading(false);
     }
   }
 
-  /// Authoritative family-membership setter. Pass the familyId the backend
-  /// confirmed, or null to clear. Persists to secure storage so future cold
-  /// starts can render the right route before the backend check resolves.
   Future<void> setFamily(int? familyId) async {
     if (familyId == null) {
       await _tokenStorage.clearFamilyId();
@@ -122,7 +105,6 @@ class AuthController extends ChangeNotifier {
       _displayName = displayName;
       _email = email;
       _isAuthenticated = true;
-      // hasFamily is decided by the post-auth bootstrap that hits /families/mine.
       _hasFamily = false;
       _familyResolved = false;
       await _tokenStorage.clearFamilyId();
@@ -151,7 +133,6 @@ class AuthController extends ChangeNotifier {
       _email = email;
       _displayName = await _tokenStorage.getDisplayName();
       _isAuthenticated = true;
-      // hasFamily will be confirmed by the post-auth bootstrap against the backend.
       _hasFamily = false;
       _familyResolved = false;
       notifyListeners();
@@ -165,9 +146,6 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  /// Local-only logout used when the server has already rejected the cached
-  /// token (e.g. 401). No /logout call — refresh would 401 too. Just scrubs
-  /// secure storage so the router bounces the next render to /login.
   Future<void> forceLogout() async {
     if (!_isAuthenticated &&
         !_hasFamily &&
@@ -188,9 +166,7 @@ class AuthController extends ChangeNotifier {
     if (refreshToken != null) {
       try {
         await _repository.logout(refreshToken);
-      } catch (_) {
-        // Always clear local tokens even if server revocation fails
-      }
+      } catch (_) {}
     }
     await _tokenStorage.clearTokens();
     _isAuthenticated = false;

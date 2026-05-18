@@ -12,9 +12,6 @@ class ApiException implements Exception {
   String toString() => 'ApiException($statusCode): $message';
 }
 
-/// Pluggable refresh hook. Returns the new access token on success, or null
-/// if the refresh failed (caller will then trigger logout). Wired up by the
-/// auth layer so ApiClient stays free of auth-state knowledge.
 typedef RefreshTokenFn = Future<String?> Function();
 
 class ApiClient {
@@ -28,13 +25,7 @@ class ApiClient {
   final http.Client _client;
   final Future<String?> Function()? tokenProvider;
 
-  /// Called when a request returns 401 — if it returns a new access token,
-  /// the original request is retried once with the new token. If it returns
-  /// null, [onUnauthorized] fires and the request fails with 401.
   final RefreshTokenFn? refreshToken;
-
-  /// Invoked once when refresh fails or no refresh hook is wired. Used by
-  /// the auth layer to clear secure storage and bounce to /login.
   final Future<void> Function()? onUnauthorized;
 
   Future<Map<String, String>> _getHeaders() async {
@@ -110,9 +101,6 @@ class ApiClient {
       path == ApiConstants.register ||
       path == ApiConstants.refresh;
 
-  /// Coalesce concurrent refreshes — if 5 requests all hit 401 at once, we
-  /// only want to call /auth/refresh once and have everyone wait on the same
-  /// future. Otherwise the second refresh sees a rotated (now-invalid) token.
   Future<String?>? _inflightRefresh;
 
   Future<dynamic> _safeRequest(
@@ -120,8 +108,6 @@ class ApiClient {
     try {
       final response = await fn();
 
-      // Try a single refresh + retry on auth failure (skip auth endpoints
-      // themselves, since refreshing on a bad password would loop).
       if (response.statusCode == 401 &&
           !_isAuthPath(path) &&
           refreshToken != null) {
@@ -151,8 +137,6 @@ class ApiClient {
 
   dynamic _handleResponse(http.Response response, String path) {
     if (response.statusCode == 401 && !_isAuthPath(path)) {
-      // Fire-and-forget — caller will get a thrown exception anyway, but the
-      // background task scrubs the bad token so the next render bounces to /login.
       onUnauthorized?.call();
     }
 

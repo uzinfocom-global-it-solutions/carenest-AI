@@ -1,6 +1,5 @@
-namespace Backend.Infrastructure.Services;
+﻿namespace Backend.Infrastructure.Services;
 
-/// Singleton state holder for AI Test Mode.
 public sealed class AiTestModeService
 {
     private volatile bool _enabled;

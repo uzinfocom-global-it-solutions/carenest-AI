@@ -1,13 +1,8 @@
-using Backend.Application.Common.Interfaces;
+﻿using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 
 namespace Backend.Infrastructure.Weather;
 
-/// <summary>
-/// Deterministic in-memory weather provider for dev / tests / environments without an external API key.
-/// Outputs are derived from a hash of the location key + the current hour, so calls within the same
-/// hour produce the same snapshot (useful for caching tests).
-/// </summary>
 internal sealed class StubWeatherProvider : IWeatherProvider
 {
     public Task<WeatherProviderResult> FetchAsync(

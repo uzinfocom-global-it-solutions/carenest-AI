@@ -1,22 +1,5 @@
-namespace Backend.Web.Infrastructure;
+﻿namespace Backend.Web.Infrastructure;
 
-/// <summary>
-/// Minimal `.env` loader so secrets can sit in a per-developer file alongside
-/// the project instead of in source. Loaded BEFORE the host builder so the
-/// standard <c>AddEnvironmentVariables()</c> source picks the values up and
-/// they override anything in <c>appsettings.json</c>.
-///
-/// Syntax supported:
-/// <list type="bullet">
-///   <item><description><c>KEY=value</c></description></item>
-///   <item><description>Lines starting with <c>#</c> are comments</description></item>
-///   <item><description>Surrounding double or single quotes are stripped</description></item>
-///   <item><description>Existing process env vars are not overwritten</description></item>
-/// </list>
-///
-/// Use the .NET configuration convention for nested keys: <c>LLM__Token=...</c>
-/// becomes the <c>LLM:Token</c> setting.
-/// </summary>
 internal static class DotEnvLoader
 {
     public static void Load(params string[] candidatePaths)
@@ -50,7 +33,6 @@ internal static class DotEnvLoader
                 value = value[1..^1];
             }
 
-            // Don't clobber values the host already provided (real env, k8s, etc).
             if (Environment.GetEnvironmentVariable(key) is not null) continue;
             Environment.SetEnvironmentVariable(key, value);
         }

@@ -1,4 +1,4 @@
-namespace Backend.Application.Common.Interfaces;
+﻿namespace Backend.Application.Common.Interfaces;
 
 public interface IIntentParser
 {
@@ -69,16 +69,8 @@ public record ParsedIntent(
     FollowUpInfo? FollowUp = null,
     string? DetectedIssueType = null);
 
-/// <summary>
-/// Instructs the system to send an automatic follow-up message after a delay.
-/// Used when the AI detects a health situation (e.g. fever) and wants to check back.
-/// </summary>
 public record FollowUpInfo(int InMinutes, string Question);
 
-/// <summary>
-/// A structured action the assistant has detected in the user's message and
-/// would like the user to confirm before executing (e.g. "add Mila, 5").
-/// </summary>
 public record AssistantProposal(
     string Type,           // add_child, add_event, add_routine, add_note, update_sensitivity
     string Summary,        // human-readable description for the chat bubble

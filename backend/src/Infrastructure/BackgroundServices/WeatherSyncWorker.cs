@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Backend.Infrastructure.Data;
@@ -9,11 +9,6 @@ using Microsoft.Extensions.Options;
 
 namespace Backend.Infrastructure.BackgroundServices;
 
-/// <summary>
-/// Periodically pulls fresh weather snapshots for every distinct family location.
-/// After storing a new snapshot, publishes a "weather_updated" SSE event to all
-/// active family members so Flutter refreshes immediately without polling.
-/// </summary>
 internal sealed class WeatherSyncWorker : PeriodicBackgroundService
 {
     private readonly TimeSpan _interval;
@@ -37,7 +32,6 @@ internal sealed class WeatherSyncWorker : PeriodicBackgroundService
         var sse     = scopedServices.GetRequiredService<ISseConnectionManager>();
         var logger  = scopedServices.GetRequiredService<ILogger<WeatherSyncWorker>>();
 
-        // Load all families with a configured location + their active member IDs
         var families = await context.Families
             .Where(f => f.DefaultLocationKey != null)
             .Select(f => new
@@ -71,7 +65,6 @@ internal sealed class WeatherSyncWorker : PeriodicBackgroundService
                 logger.LogInformation("[WeatherSync] Stored snapshot for family={FamilyId}: {Temp}°C {Condition}",
                     family.Id, snapshot.TemperatureC, snapshot.WeatherCondition);
 
-                // Notify all active family members via SSE so Flutter refreshes without polling
                 var ssePayload = JsonSerializer.Serialize(new
                 {
                     familyId    = family.Id,

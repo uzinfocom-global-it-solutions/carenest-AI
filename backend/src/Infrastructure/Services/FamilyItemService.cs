@@ -1,4 +1,4 @@
-using Backend.Application.Common.Interfaces;
+﻿using Backend.Application.Common.Interfaces;
 using Backend.Domain.Entities;
 using Backend.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -101,7 +101,6 @@ public sealed class FamilyItemService : IFamilyItemService
         var query = _db.FamilyItems
             .Where(i => i.FamilyId == familyId && i.IsActive && i.IsRequired);
 
-        // Include family-wide items (no child) and child-specific items if childId provided
         if (childId.HasValue)
             query = query.Where(i => i.ChildId == null || i.ChildId == childId.Value);
         else

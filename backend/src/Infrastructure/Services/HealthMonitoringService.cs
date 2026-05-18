@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Entities;
 using Backend.Domain.Enums;
@@ -127,7 +127,6 @@ public sealed class HealthMonitoringService : IHealthMonitoringService
         session.MissedFollowUps++;
         session.LastUpdatedAt = DateTimeOffset.UtcNow;
 
-        // Auto-escalate after 3 missed follow-ups
         if (session.MissedFollowUps >= 3 && session.EscalationLevel < MonitoringEscalationLevel.High)
             session.EscalationLevel = MonitoringEscalationLevel.High;
 

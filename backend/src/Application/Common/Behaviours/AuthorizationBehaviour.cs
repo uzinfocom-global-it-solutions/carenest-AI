@@ -25,13 +25,11 @@ public class AuthorizationBehaviour<TRequest, TResponse> : IPipelineBehavior<TRe
 
         if (authorizeAttributes.Any())
         {
-            // Must be authenticated user
             if (_user.Id == null)
             {
                 throw new UnauthorizedAccessException();
             }
 
-            // Role-based authorization
             var authorizeAttributesWithRoles = authorizeAttributes.Where(a => !string.IsNullOrWhiteSpace(a.Roles));
 
             if (authorizeAttributesWithRoles.Any())
@@ -51,14 +49,12 @@ public class AuthorizationBehaviour<TRequest, TResponse> : IPipelineBehavior<TRe
                     }
                 }
 
-                // Must be a member of at least one role in roles
                 if (!authorized)
                 {
                     throw new ForbiddenAccessException();
                 }
             }
 
-            // Policy-based authorization
             var authorizeAttributesWithPolicies = authorizeAttributes.Where(a => !string.IsNullOrWhiteSpace(a.Policy));
             if (authorizeAttributesWithPolicies.Any())
             {
@@ -74,7 +70,6 @@ public class AuthorizationBehaviour<TRequest, TResponse> : IPipelineBehavior<TRe
             }
         }
 
-        // User is authorized / authorization not required
         return await next();
     }
 }

@@ -36,7 +36,6 @@ public class AIFeed : IEndpointGroup
 
         if (familyId is null) return Results.NotFound("Family not found");
 
-        // Get the family's earliest chat (primary family chat)
         var chatId = await db.Chats
             .Where(c => c.FamilyId == familyId.Value)
             .OrderBy(c => c.CreatedAt)

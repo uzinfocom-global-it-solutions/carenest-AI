@@ -1,8 +1,6 @@
 import 'package:flutter/widgets.dart';
 import '../../features/notifications/data/sse_client.dart';
 
-/// Observes app lifecycle and reconnects SSE when the app comes to foreground.
-/// Also triggers data refresh callbacks registered by feature controllers.
 class AppLifecycleObserver extends WidgetsBindingObserver {
   AppLifecycleObserver({required this.sseClient});
 
@@ -19,7 +17,6 @@ class AppLifecycleObserver extends WidgetsBindingObserver {
       case AppLifecycleState.resumed:
         _onResume();
       case AppLifecycleState.paused:
-        // Keep SSE alive in background — don't disconnect
         break;
       case AppLifecycleState.detached:
         sseClient.disconnect();
@@ -29,12 +26,10 @@ class AppLifecycleObserver extends WidgetsBindingObserver {
   }
 
   void _onResume() {
-    // Reconnect SSE if it dropped while backgrounded
     if (!sseClient.connected) {
       sseClient.connect();
     }
 
-    // Refresh feature data
     for (final cb in _resumeCallbacks) {
       cb().catchError((_) {});
     }

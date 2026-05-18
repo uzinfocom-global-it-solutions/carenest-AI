@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Chats.Commands.ConfirmProposal;
 using Backend.Application.Chats.Models;
 using Backend.Application.Common.Interfaces;
@@ -71,8 +71,6 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
         if (!Enum.TryParse<InputModeEnum>(request.InputMode, ignoreCase: true, out var mode))
             throw new ValidationException([new("inputMode", $"Invalid input mode '{request.InputMode}'.")]);
 
-        // Load full family/children context and recent chat history BEFORE saving the current message,
-        // so history contains only previous messages (not the one being processed now).
         var family = await _context.Families.FindAsync([chat.FamilyId], cancellationToken);
 
         var children = await _context.Children
@@ -82,7 +80,6 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
             .Where(c => c.FamilyId == chat.FamilyId)
             .ToListAsync(cancellationToken);
 
-        // 40 messages = solid memory of the full conversation thread.
         var recentHistory = await _context.ChatMessages
             .Where(m => m.ChatId == request.ChatId)
             .OrderByDescending(m => m.CreatedAt)
@@ -93,14 +90,11 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
                 m.Content))
             .ToListAsync(cancellationToken);
 
-        // For very long chats, prepend a one-line summary so older context
-        // isn't completely lost even if it falls outside the 40-message window.
         string? conversationSummary = null;
         var totalMessages = await _context.ChatMessages
             .CountAsync(m => m.ChatId == request.ChatId, cancellationToken);
         if (totalMessages > 40)
         {
-            // Grab the first 10 messages (conversation seed) as a memory anchor.
             var seedRaw = await _context.ChatMessages
                 .Where(m => m.ChatId == request.ChatId)
                 .OrderBy(m => m.CreatedAt)
@@ -139,9 +133,6 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
             return new ChildContext(c.Id, c.DisplayName, c.AgeYears, c.AgeGroup.ToString(), sensitivity, notes, routines);
         }).ToList();
 
-        // Latest weather snapshot from the most recently-updated location.
-        // Gives the LLM real numbers so it can answer "what's the weather"
-        // and reason about clothing/outdoor safety with actual data.
         var latestWeather = await _context.WeatherSnapshots
             .OrderByDescending(w => w.CollectedAt)
             .Take(1)
@@ -159,9 +150,6 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
             .FirstOrDefaultAsync(cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
-        // Uzbekistan is UTC+5 (UZT). We use UZT midnight as the window start
-        // so all events scheduled for today in Uzbekistan are always visible
-        // to the AI, even if it's still yesterday in UTC.
         var uztOffset = TimeSpan.FromHours(5);
         var nowUzt = now.ToOffset(uztOffset);
         var todayStartUzt = new DateTimeOffset(nowUzt.Date, uztOffset); // midnight UZT
@@ -182,7 +170,6 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
             })
             .ToListAsync(cancellationToken);
 
-        // Build a lookup so we can resolve ChildId → DisplayName without a second round-trip.
         var childNameLookup = children.ToDictionary(c => c.Id, c => c.DisplayName);
 
         var upcomingEventContexts = upcomingRaw
@@ -194,7 +181,6 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
                 e.WeatherSensitive))
             .ToList();
 
-        // Recent recommendations so AI avoids repeating the same advice.
         var recentRecs = await _context.Recommendations
             .Where(r => r.FamilyId == chat.FamilyId
                      && r.CreatedAt >= now.AddDays(-3))
@@ -254,7 +240,6 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
 
                 if (intent.TriggersRecommendation)
                 {
-                    // Fire-and-forget recommendation generation — failures must not fail the chat message
                     foreach (var child in children)
                     {
                         try { await _mediator.Send(new GenerateRecommendationsCommand(child.Id, request.UserId), cancellationToken); }
@@ -294,8 +279,6 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
         await _audit.LogAsync(request.UserId, "chat.message_sent", "chat_message", userMessage.Id,
             new { chatId = request.ChatId, intent = intent?.Intent }, cancellationToken);
 
-        // Analyze user response if it's a reply to a monitoring follow-up.
-        // This runs fire-and-forget so it never delays the chat response.
         _ = Task.Run(async () =>
         {
             try
@@ -312,7 +295,6 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
                         awaitingSession.Id, request.Content,
                         analysis.ResponseAnalysisJson ?? "{}", CancellationToken.None);
 
-                    // Apply score modifier to session risk
                     if (analysis.ScoreModifier != 0)
                     {
                         var newScore = Math.Clamp(awaitingSession.RiskScore + analysis.ScoreModifier, 0, 100);
@@ -343,7 +325,6 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
                     }
                     else
                     {
-                        // Schedule next follow-up at the adaptive interval
                         var nextAt = DateTimeOffset.UtcNow.AddMinutes(analysis.NextIntervalMinutes);
                         await _healthMonitoring.MarkFollowUpSentAsync(
                             awaitingSession.Id, nextAt, CancellationToken.None);
@@ -356,7 +337,6 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
                             CancellationToken.None);
                     }
 
-                    // Emit realtime SSE so Flutter updates the monitoring view
                     var memberIds = await _context.FamilyMembers
                         .Where(m => m.FamilyId == chat.FamilyId && m.Status == FamilyMemberStatusEnum.Active)
                         .Select(m => m.UserId)
@@ -386,7 +366,6 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
             }
         }, CancellationToken.None);
 
-        // Start or update a health monitoring session when a symptom is detected.
         if (intent?.DetectedIssueType is { } issueTypeStr && successful)
         {
             _ = Task.Run(async () =>
@@ -413,7 +392,6 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
             }, CancellationToken.None);
         }
 
-        // Schedule autonomous follow-up when AI detects a health symptom.
         if (intent?.FollowUp is { } followUp && followUp.InMinutes > 0)
         {
             var scheduledAt = DateTimeOffset.UtcNow.AddMinutes(followUp.InMinutes);
@@ -422,7 +400,6 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
                 .Select(m => m.UserId)
                 .ToListAsync(cancellationToken);
 
-            // Find any active monitoring session to include in metadata for dispatcher
             var activeSession = await _context.HealthMonitoringSessions
                 .Where(s => s.FamilyId == chat.FamilyId && !s.IsResolved)
                 .OrderByDescending(s => s.RiskScore)
@@ -464,19 +441,11 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
             aiResponse, aiResponse, aiMessage.ParsedIntent, successful, aiMessage.CreatedAt);
     }
 
-    /// <summary>
-    /// Canonical JSON the client reads to render proposal cards. We always
-    /// rebuild it from the parsed intent — if the LLM returned a malformed or
-    /// proposal-less payload, the rule-based fallback's structured fields still
-    /// reach the UI.
-    /// </summary>
     private static string BuildParsedIntentJson(ParsedIntent intent)
     {
         object? proposal = null;
         if (intent.Proposal is { } p)
         {
-            // Inline the params object so the client sees a real nested object,
-            // not a JSON-encoded string.
             using var paramsDoc = JsonDocument.Parse(string.IsNullOrWhiteSpace(p.ParametersJson) ? "{}" : p.ParametersJson);
             proposal = new
             {

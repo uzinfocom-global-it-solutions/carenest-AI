@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Entities;
 using Backend.Domain.Enums;
@@ -7,15 +7,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Backend.Infrastructure.Services;
 
-/// Central deduplication and suppression gate for all AI-generated notifications.
-///
-/// Suppression windows by priority:
-///   Emergency : 2 min  (almost never suppressed — prevents exact duplicate in same cycle)
-///   High      : 10 min
-///   Normal    : 30 min
-///   Low       : 60 min
-///
-/// Emergency alerts from escalation chains are never suppressed for different sessions.
 public sealed class AiPriorityEngine : IAiPriorityEngine
 {
     private readonly IApplicationDbContext _db;
@@ -117,7 +108,6 @@ public sealed class AiPriorityEngine : IAiPriorityEngine
         }
         catch (Exception ex)
         {
-            // Non-fatal — the decision was already executed; log persistence failure is acceptable
             _logger.LogWarning(ex,
                 "Failed to persist AiDecisionLog for family {FamilyId}, type={Type}",
                 familyId, decisionType);

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app/features/ai_timeline/application/ai_feed_controller.dart';
 import 'package:app/features/notifications/application/voice_notification_controller.dart';
@@ -93,7 +93,6 @@ class _AITimelineScreenState extends State<AITimelineScreen> {
                           separatorBuilder: (_, _) => const SizedBox(height: 8),
                           itemBuilder: (context, i) {
                             final item = filtered[i];
-                            // Find matching pending voice action by correlationId
                             VoiceActionModel? linkedAction;
                             if (item.correlationId != null) {
                               try {
@@ -293,7 +292,6 @@ class _TimelineCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Colored left dot/bar
             Container(
               width: 4,
               decoration: BoxDecoration(

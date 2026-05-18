@@ -3,12 +3,6 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
-/// Priority-ordered TTS queue.
-/// Higher priority values interrupt lower-priority playback.
-///
-/// Usage:
-///   VoicePlaybackOrchestrator.instance.enqueue('Доброе утро!', priority: 0);
-///   VoicePlaybackOrchestrator.instance.enqueue('🚨 Срочно!', priority: 10);
 class VoicePlaybackOrchestrator extends ChangeNotifier {
   VoicePlaybackOrchestrator._();
   static final instance = VoicePlaybackOrchestrator._();
@@ -59,11 +53,6 @@ class VoicePlaybackOrchestrator extends ChangeNotifier {
     });
   }
 
-  /// Enqueue text for playback.
-  ///
-  /// [priority]: higher = more urgent. Emergency = 100, High = 50, Normal = 10, Low = 1.
-  /// [interruptIfHigher]: if true, stops current playback when this job's priority
-  ///   is strictly higher than the current job's priority.
   Future<void> enqueue(
     String text, {
     int priority = 10,
@@ -79,12 +68,11 @@ class VoicePlaybackOrchestrator extends ChangeNotifier {
       enqueuedAt: DateTime.now(),
     );
 
-    // Emergency (priority >= 100) always interrupts
     if (interruptIfHigher && _playing && _currentJob != null) {
       if (job.priority > _currentJob!.priority) {
         await _tts.stop();
         _queue.add(job);
-        return; // completion handler will trigger _processNext with new job at front
+        return;
       }
     }
 
@@ -95,7 +83,6 @@ class VoicePlaybackOrchestrator extends ChangeNotifier {
     }
   }
 
-  /// Immediately stop all playback and clear the queue.
   Future<void> stopAll() async {
     await _init();
     _queue.clear();
@@ -105,7 +92,6 @@ class VoicePlaybackOrchestrator extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Stop current only, continue with queue.
   Future<void> skip() async {
     await _init();
     await _tts.stop();
@@ -138,7 +124,6 @@ class VoicePlaybackOrchestrator extends ChangeNotifier {
   }
 
   static String _cleanForTts(String text) {
-    // Remove markdown, emojis that TTS reads as symbols, leading/trailing whitespace
     return text
         .replaceAll(RegExp(r'[*_`~#]'), '')
         .replaceAll(RegExp(r'[\u{1F600}-\u{1F64F}]', unicode: true), '')
@@ -169,7 +154,6 @@ class _TtsJob implements Comparable<_TtsJob> {
 
   @override
   int compareTo(_TtsJob other) {
-    // Higher priority first; break ties by enqueue time (earlier first)
     final cmp = other.priority.compareTo(priority);
     if (cmp != 0) return cmp;
     return enqueuedAt.compareTo(other.enqueuedAt);

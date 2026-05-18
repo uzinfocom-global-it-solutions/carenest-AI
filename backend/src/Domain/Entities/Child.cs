@@ -1,4 +1,4 @@
-using Backend.Domain.Common;
+﻿using Backend.Domain.Common;
 using Backend.Domain.Enums;
 
 namespace Backend.Domain.Entities;
@@ -9,7 +9,6 @@ public class Child : BaseEntity
     public required string DisplayName { get; set; }
     public required int AgeYears { get; set; }
     public AgeGroupEnum AgeGroup { get; set; }
-    /// <summary>"Male" | "Female" | null — detected or set by the parent.</summary>
     public string? Gender { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;

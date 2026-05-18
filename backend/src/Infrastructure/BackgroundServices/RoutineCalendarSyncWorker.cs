@@ -1,4 +1,4 @@
-using Backend.Domain.Entities;
+﻿using Backend.Domain.Entities;
 using Backend.Domain.Enums;
 using Backend.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -8,11 +8,6 @@ using Microsoft.Extensions.Options;
 
 namespace Backend.Infrastructure.BackgroundServices;
 
-/// <summary>
-/// Materialises active <see cref="ChildRoutine"/> rows into <see cref="CalendarEvent"/> rows for the
-/// next N days. Idempotent: it skips dates where an AI-source event already exists for the same
-/// child + start time, so multiple iterations don't duplicate.
-/// </summary>
 internal sealed class RoutineCalendarSyncWorker : PeriodicBackgroundService
 {
     private readonly TimeSpan _interval;
@@ -37,9 +32,6 @@ internal sealed class RoutineCalendarSyncWorker : PeriodicBackgroundService
         await SyncAsync(context, _horizonDays, cancellationToken);
     }
 
-    /// <summary>
-    /// Test-friendly entry-point. Pure: takes a context, returns count of created events.
-    /// </summary>
     public static async Task<int> SyncAsync(
         ApplicationDbContext context,
         int horizonDays,
@@ -74,7 +66,6 @@ internal sealed class RoutineCalendarSyncWorker : PeriodicBackgroundService
                 if (endUtc <= startUtc)
                     endUtc = endUtc.AddDays(1); // overnight (e.g. sleep)
 
-                // Idempotency: skip if an AI-generated event for this routine already exists at this start.
                 var alreadyExists = await context.CalendarEvents.AnyAsync(
                     e => e.ChildId == routine.ChildId
                       && e.Source == CalendarEventSourceEnum.Ai

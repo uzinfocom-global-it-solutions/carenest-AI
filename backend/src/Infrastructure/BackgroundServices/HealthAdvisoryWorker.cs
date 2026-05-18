@@ -1,4 +1,4 @@
-using Backend.Application.Common.Interfaces;
+﻿using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Backend.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -7,12 +7,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Backend.Infrastructure.BackgroundServices;
 
-/// <summary>
-/// Runs every hour between 07:00–22:00 local time.
-/// For each family: builds health + weather context, asks the LLM for a
-/// personalised health tip in Russian, then sends it as a VoiceAction and
-/// saves it to the family AI chat. De-duplicated per family per hour.
-/// </summary>
 internal sealed class HealthAdvisoryWorker : PeriodicBackgroundService
 {
     public HealthAdvisoryWorker(
@@ -25,7 +19,6 @@ internal sealed class HealthAdvisoryWorker : PeriodicBackgroundService
 
     protected override async Task ExecuteIterationAsync(IServiceProvider services, CancellationToken ct)
     {
-        // Skip during night hours — don't wake the family
         var localHour = DateTime.Now.Hour;
         if (localHour < 7 || localHour >= 22) return;
 
@@ -65,7 +58,6 @@ internal sealed class HealthAdvisoryWorker : PeriodicBackgroundService
         var now = DateTimeOffset.UtcNow;
         var hourKey = $"health-advisory:{familyId}:{now:yyyyMMddHH}";
 
-        // Skip if we already sent an advisory this hour for this family
         var alreadySent = await db.VoiceActions
             .AnyAsync(a => a.FamilyId == familyId
                            && a.IdempotencyKey != null
@@ -75,7 +67,6 @@ internal sealed class HealthAdvisoryWorker : PeriodicBackgroundService
 
         var ctx = await contextService.BuildContextAsync(familyId, ct);
 
-        // Need at least one child to generate meaningful advice
         if (ctx.Children.Count == 0) return;
 
         var prompt = BuildPrompt(ctx, now);
@@ -212,7 +203,6 @@ internal sealed class HealthAdvisoryWorker : PeriodicBackgroundService
 
         var parts = new List<string>();
 
-        // Events happening within the next 3 hours
         var nextEvent = ctx.TodayEvents
             .Where(e => e.StartTime > now && e.StartTime <= now.AddHours(3))
             .OrderBy(e => e.StartTime)
@@ -229,7 +219,6 @@ internal sealed class HealthAdvisoryWorker : PeriodicBackgroundService
             parts.Add($"Скоро{who}: «{nextEvent.Title}» — {timeStr}.");
         }
 
-        // Medications due within the next 2 hours
         var upcoming = ctx.TodayMedications
             .Select(m => (med: m, t: new DateTimeOffset(now.Date.Add(m.ScheduleTime.ToTimeSpan()), now.Offset)))
             .Where(x => x.t > now.AddMinutes(5) && x.t <= now.AddHours(2))
@@ -244,7 +233,6 @@ internal sealed class HealthAdvisoryWorker : PeriodicBackgroundService
             parts.Add($"Ближайшие лекарства: {medStr}.");
         }
 
-        // Weather personalised to child sensitivities
         if (ctx.Weather is { } w)
         {
             foreach (var child in ctx.Children)
@@ -272,7 +260,6 @@ internal sealed class HealthAdvisoryWorker : PeriodicBackgroundService
                 }
             }
 
-            // Generic weather if no sensitivity match and no other parts
             if (parts.Count == 0)
             {
                 var allNames = string.Join(" и ", ctx.Children.Select(c => c.Name));
@@ -290,7 +277,6 @@ internal sealed class HealthAdvisoryWorker : PeriodicBackgroundService
         if (parts.Count > 0)
             return string.Join(" ", parts);
 
-        // Schedule summary or time-of-day check-in
         var c0 = ctx.Children[0];
         var evCnt  = ctx.TodayEvents.Count;
         var medCnt = ctx.TodayMedications.Count;

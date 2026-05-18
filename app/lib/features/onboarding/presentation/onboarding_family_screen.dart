@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:app/features/onboarding/application/onboarding_controller.dart';
@@ -39,7 +39,6 @@ class _OnboardingFamilyScreenState extends State<OnboardingFamilyScreen> {
       }
       return;
     }
-    // Family created — continue onboarding into the kids step.
     if (mounted) context.go('/onboarding/kids');
   }
 

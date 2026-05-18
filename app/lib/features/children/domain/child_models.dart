@@ -24,7 +24,6 @@ class ChildRoutineModel {
   final bool active;
 
   factory ChildRoutineModel.fromJson(Map<String, dynamic> json) {
-    // TimeOnly serialises as "HH:mm:ss" from .NET
     String timeStr(dynamic v) => (v as String?) ?? '00:00:00';
     return ChildRoutineModel(
       id: json['id'] as int,

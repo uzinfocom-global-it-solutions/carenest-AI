@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Backend.Application.Common.Interfaces;
 using Backend.Infrastructure.Adapters;
 using Backend.Infrastructure.Ai;
@@ -41,10 +41,8 @@ public static class DependencyInjection
         builder.Services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
 
-        // BCrypt password hasher — must be registered BEFORE AddIdentityCore (Identity uses TryAdd*).
         builder.Services.AddScoped<IPasswordHasher<ApplicationUser>, BCryptPasswordHasher>();
 
-        // Identity — user management only, no built-in API endpoints
         builder.Services
             .AddIdentityCore<ApplicationUser>(options =>
             {
@@ -55,12 +53,10 @@ public static class DependencyInjection
             .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<ApplicationDbContext>();
 
-        // JWT settings
         var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
             ?? throw new InvalidOperationException("JWT settings ('Jwt') are not configured.");
         builder.Services.AddSingleton(jwtSettings);
 
-        // JWT bearer authentication
         builder.Services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -77,13 +73,10 @@ public static class DependencyInjection
                     IssuerSigningKey = new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
                     ClockSkew = TimeSpan.Zero,
-                    // Prevent .NET from remapping "sub" → ClaimTypes.NameIdentifier
                     NameClaimType = "sub",
                     RoleClaimType = "role",
                 };
 
-                // Allow JWT via query param for SSE endpoints (browser EventSource can't set headers).
-                // Also used by debug.html's SSE inspector.
                 options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
                 {
                     OnMessageReceived = ctx =>
@@ -105,11 +98,9 @@ public static class DependencyInjection
         builder.Services.AddTransient<IIdentityService, IdentityService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
 
-        // Infrastructure capabilities (technical writers consumed by Application handlers)
         builder.Services.AddScoped<INotificationService, NotificationService>();
         builder.Services.AddScoped<IAuditService, AuditService>();
 
-        // Push notifications via SSE (no external service required)
         builder.Services.AddScoped<IPushNotificationService, LocalPushNotificationService>();
         builder.Services.AddScoped<VoiceActionDeduplicationService>();
         builder.Services.AddScoped<IVoiceActionService, VoiceActionService>();
@@ -124,17 +115,13 @@ public static class DependencyInjection
         builder.Services.AddScoped<IAiPriorityEngine, AiPriorityEngine>();
         builder.Services.AddScoped<IAiDecisionEngine, AiDecisionEngine>();
 
-        // SSE: singleton so connections survive request lifetimes
         builder.Services.AddSingleton<ISseConnectionManager, SseConnectionManager>();
 
-        // AI Test Mode — singleton state + always-on worker (worker self-gates on IsEnabled)
         builder.Services.AddSingleton<AiTestModeService>();
         builder.Services.AddHostedService<AiTestModeWorker>();
 
-        // Voice action in-memory queue: singleton channel shared across scopes
         builder.Services.AddSingleton<IVoiceActionQueue, VoiceActionQueue>();
 
-        // AI client: vLLM (OpenAI-compatible) when configured, null client otherwise.
         builder.Services.Configure<LLMOptions>(
             builder.Configuration.GetSection(LLMOptions.SectionName));
 
@@ -154,10 +141,6 @@ public static class DependencyInjection
             builder.Services.AddSingleton<IChildProfileExtractor, RuleBasedChildProfileExtractor>();
         }
 
-        // Weather provider: Open-Meteo (no API key) by default. Override via Weather:Provider.
-        //   "Stub"          -> deterministic in-memory provider (used by tests)
-        //   "OpenMeteo"     -> https://open-meteo.com (default in production)
-        //   "OpenWeatherMap"-> requires Weather:ApiKey
         var weatherProvider = builder.Configuration["Weather:Provider"] ?? "OpenMeteo";
         if (string.Equals(weatherProvider, "OpenWeatherMap", StringComparison.OrdinalIgnoreCase))
         {
@@ -172,13 +155,11 @@ public static class DependencyInjection
             builder.Services.AddScoped<IWeatherProvider, OpenMeteoProvider>();
         }
 
-        // Adapters — WeatherAdapter is the real impl; CachedWeatherAdapter wraps it as the public IWeatherAdapter.
         builder.Services.AddScoped<WeatherAdapter>();
         builder.Services.AddScoped<IWeatherAdapter, CachedWeatherAdapter>();
         builder.Services.AddScoped<IIntentParser, IntentParser>();
         builder.Services.AddHttpClient("weather");
 
-        // Distributed cache: Redis when configured, in-memory fallback otherwise.
         var redisConnectionString = builder.Configuration.GetConnectionString(Services.Redis);
 
         var healthChecks = builder.Services.AddHealthChecks()
@@ -206,7 +187,6 @@ public static class DependencyInjection
             builder.Services.AddDistributedMemoryCache();
         }
 
-        // Background workers — bind options + register hosted services. Tests disable via config.
         builder.Services.Configure<BackgroundWorkerOptions>(
             builder.Configuration.GetSection(BackgroundWorkerOptions.SectionName));
 
@@ -225,7 +205,6 @@ public static class DependencyInjection
             builder.Services.AddHostedService<NotificationDispatcherService>();
             builder.Services.AddHostedService<EscalationEngineService>();
             builder.Services.AddHostedService<MorningBriefingService>();
-            // ProactiveVoiceWorker removed — AQI/weather alerts now handled by AiDecisionEngine via ContinuousContextAnalysisWorker
             builder.Services.AddHostedService<LeaveHomeChecklistWorker>();
             builder.Services.AddHostedService<HealthAdvisoryWorker>();
             builder.Services.AddHostedService<ScheduledReminderWorker>();

@@ -4,11 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/constants/api_constants.dart';
 
-/// Production-grade SSE client with:
-/// - Exponential backoff reconnect (1s → 2s → 4s → … → 30s cap)
-/// - Event deduplication by Last-Event-ID
-/// - App lifecycle awareness (caller connects/disconnects)
-/// - Clean resource management (single http.Client per connection)
 class SseClient {
   SseClient({required this.tokenProvider});
 
@@ -27,10 +22,7 @@ class SseClient {
   int _reconnectAttempt = 0;
   static const int _maxBackoffSeconds = 30;
 
-  /// Last received event ID — sent to server on reconnect for replay
   String? _lastEventId;
-
-  /// Deduplication: ignore events we've seen in this session
   final _seenIds = <String>{};
 
   Future<void> connect() async {
@@ -44,7 +36,6 @@ class SseClient {
     }
 
     var uriStr = '${ApiConstants.baseUrl}/api/v1/sse';
-    // Also append token as query param (matches server's JwtBearer OnMessageReceived)
     uriStr += '?access_token=${Uri.encodeComponent(token)}';
     if (_lastEventId != null) {
       uriStr += '&lastEventId=${Uri.encodeComponent(_lastEventId!)}';
@@ -107,18 +98,14 @@ class SseClient {
     final msg = _parseBlock(block);
     if (msg == null) return;
 
-    // Track last event ID for reconnect
     if (msg.id != null) _lastEventId = msg.id;
 
-    // Deduplication: skip if we've seen this event ID in this session
     if (msg.id != null) {
       if (_seenIds.contains(msg.id)) return;
       _seenIds.add(msg.id!);
-      // Keep set bounded (last 1000 IDs)
       if (_seenIds.length > 1000) _seenIds.remove(_seenIds.first);
     }
 
-    // Skip infrastructure events
     if (msg.eventType == 'heartbeat' || msg.eventType == 'connected') return;
 
     _controller.add(msg);
@@ -135,7 +122,6 @@ class SseClient {
     if (_disposed) return;
     _reconnectTimer?.cancel();
 
-    // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s (capped)
     final delaySeconds = (_reconnectAttempt == 0
             ? 1
             : (1 << _reconnectAttempt).clamp(1, _maxBackoffSeconds))
@@ -203,7 +189,6 @@ class SseMessage {
   }
 }
 
-/// Accumulates SSE lines into complete event blocks (blank-line-separated).
 class _SseLineAggregator extends StreamTransformerBase<String, String> {
   @override
   Stream<String> bind(Stream<String> stream) async* {
@@ -218,7 +203,6 @@ class _SseLineAggregator extends StreamTransformerBase<String, String> {
         buffer.add(line);
       }
     }
-    // Flush any remaining buffered lines on stream close
     if (buffer.isNotEmpty) yield buffer.join('\n');
   }
 }

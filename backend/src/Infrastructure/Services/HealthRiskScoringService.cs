@@ -1,4 +1,4 @@
-using Backend.Application.Common.Interfaces;
+﻿using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 
 namespace Backend.Infrastructure.Services;
@@ -33,7 +33,6 @@ public sealed class HealthRiskScoringService : IHealthRiskScoringService
         var score = BaseScores.TryGetValue(issueType, out var b) ? b : 20;
         var factors = new List<string>();
 
-        // Child sensitivity modifiers
         if (child is not null)
         {
             if (child.Sensitivities.Contains("дыхательные пути / астма") || child.Sensitivities.Contains("respiratory / asthma"))
@@ -59,7 +58,6 @@ public sealed class HealthRiskScoringService : IHealthRiskScoringService
             }
         }
 
-        // Symptom-specific text analysis
         if (!string.IsNullOrEmpty(symptomDescription))
         {
             var desc = symptomDescription.ToLowerInvariant();
@@ -70,7 +68,6 @@ public sealed class HealthRiskScoringService : IHealthRiskScoringService
             if (desc.Contains("потеря сознания") || desc.Contains("unconscious")) { score += 50; factors.Add("loss of consciousness"); }
         }
 
-        // Weather modifiers
         if (weather is not null)
         {
             if (weather.AqiIndex > 150 && issueType is MonitoringIssueType.Asthma or MonitoringIssueType.RespiratoryMonitoring)
@@ -79,11 +76,9 @@ public sealed class HealthRiskScoringService : IHealthRiskScoringService
             { score += 10; factors.Add("extreme heat + fever"); }
         }
 
-        // Follow-up behavior
         score += missedFollowUps * 8;
         if (missedFollowUps > 0) factors.Add($"{missedFollowUps} missed follow-up(s)");
 
-        // Escalation for persistent issues
         if (followUpCount >= 3 && currentSeverity >= MonitoringSeverity.High)
         { score += 15; factors.Add("persistent high-severity issue"); }
 
@@ -108,7 +103,6 @@ public sealed class HealthRiskScoringService : IHealthRiskScoringService
             _ => MonitoringEscalationLevel.None,
         };
 
-        // Dynamic follow-up intervals based on severity
         var nextFollowUpMinutes = severity switch
         {
             MonitoringSeverity.Low      => 60,

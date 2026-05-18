@@ -1,4 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using Backend.Application.Auth.Commands.Login;
 using Backend.Application.Auth.Commands.Logout;
 using Backend.Application.Auth.Commands.RefreshToken;
@@ -67,11 +67,9 @@ public class AuthFlowTests : TestBase
         refreshed.RefreshToken.ShouldNotBe(initial.RefreshToken);
         refreshed.AccessToken.ShouldNotBe(initial.AccessToken);
 
-        // Old refresh token must no longer be usable.
         await Should.ThrowAsync<UnauthorizedAccessException>(
             () => TestApp.SendAsync(new RefreshTokenCommand(initial.RefreshToken)));
 
-        // New one works.
         var twiceRefreshed = await TestApp.SendAsync(new RefreshTokenCommand(refreshed.RefreshToken));
         twiceRefreshed.RefreshToken.ShouldNotBe(refreshed.RefreshToken);
     }

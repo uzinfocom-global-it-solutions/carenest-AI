@@ -6,18 +6,15 @@ class AppStrings {
 
   bool get _ru => language == AppLanguage.russian;
 
-  // ── App ──────────────────────────────────────────────────────────────────
   String get appName => 'CareNestAI';
   String get appSubtitle => _ru ? 'Семейный помощник' : 'Family assistant';
 
-  // ── Bottom nav ───────────────────────────────────────────────────────────
   String get navHome => _ru ? 'Главная' : 'Home';
   String get navPlan => _ru ? 'План' : 'Plan';
   String get navTalk => _ru ? 'Голос' : 'Talk';
   String get navFamily => _ru ? 'Семья' : 'Family';
   String get navSettings => _ru ? 'Настройки' : 'Settings';
 
-  // ── Auth ─────────────────────────────────────────────────────────────────
   String get loginTitle => _ru ? 'Добро пожаловать' : 'Welcome back';
   String get loginFailed => _ru ? 'Ошибка входа' : 'Login failed';
   String get signIn => _ru ? 'Войти' : 'Sign in';
@@ -30,14 +27,12 @@ class AppStrings {
   String get email => _ru ? 'Эл. почта' : 'Email';
   String get password => _ru ? 'Пароль' : 'Password';
 
-  // ── Validators ───────────────────────────────────────────────────────────
   String get emailRequired => _ru ? 'Введите эл. почту' : 'Email is required';
   String get emailInvalid => _ru ? 'Неверный формат эл. почты' : 'Enter a valid email address';
   String get passwordRequired => _ru ? 'Введите пароль' : 'Password is required';
   String get passwordTooShort => _ru ? 'Пароль должен быть не менее 8 символов' : 'Password must be at least 8 characters';
   String get nameTooLong => _ru ? 'Имя должно быть короче 100 символов' : 'Name must be under 100 characters';
 
-  // ── Onboarding ───────────────────────────────────────────────────────────
   String get getStarted => _ru ? 'Начать' : 'Get started';
   String get alreadyHaveAccountShort => _ru ? 'У меня уже есть аккаунт' : 'I already have an account';
   String get couldNotCreateFamily => _ru ? 'Не удалось создать семью' : 'Could not create family';
@@ -63,7 +58,6 @@ class AppStrings {
   String get familyNotReady => _ru ? 'Семья не готова — попробуйте ещё раз.' : 'Family not ready — please retry.';
   String get couldNotAdd => _ru ? 'Не удалось добавить.' : 'Could not add.';
 
-  // ── Home ─────────────────────────────────────────────────────────────────
   List<String> get dayNames => _ru
       ? ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
       : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -98,7 +92,6 @@ class AppStrings {
       ? 'Попробуйте: «Добавь дневной сон для Милы в 13:00» · «Почему сегодня лучше остаться дома?»'
       : 'Try: "Add a nap for Mila at 1pm" · "Plan tomorrow" · "Why park indoors today?"';
 
-  // ── Chat ─────────────────────────────────────────────────────────────────
   String get chatNotReady => _ru ? 'Чат будет готов после настройки семьи.' : 'Chat will be ready once your family is set up.';
   String get chatEmptyHint => _ru
       ? 'Спросите меня всё о ваших детях — одежда, режим, погода…'
@@ -119,7 +112,6 @@ class AppStrings {
           'Plan today',
         ];
 
-  // ── Home quick actions ───────────────────────────────────────────────────
   String get quickActions => _ru ? 'Быстрые действия' : 'Quick actions';
   String get quickAsk => _ru ? 'Спросить' : 'Ask AI';
   String get quickVoice => _ru ? 'Голос' : 'Voice';
@@ -139,7 +131,6 @@ class AppStrings {
   String get proposalCancelled => _ru ? 'Отменено. Действие не будет применено.' : 'Cancelled. The proposal will not be applied.';
   String get confirmApplySuffix => _ru ? ' — подтвердите для применения.' : ' — confirm to apply.';
 
-  // ── Voice modal ───────────────────────────────────────────────────────────
   List<String> get confirmWords => _ru
       ? ['да', 'хорошо', 'ладно', 'конечно', 'подтвердить', 'давай', 'согласен', 'согласна', 'ок']
       : ['yes', 'yeah', 'yep', 'sure', 'okay', 'confirm', 'do it', 'go ahead', 'please do', 'sounds good'];
@@ -174,14 +165,12 @@ class AppStrings {
   String get cancellingEn => 'Okay, cancelling.';
   String get cancelling => _ru ? cancellingRu : cancellingEn;
 
-  // ── Family ────────────────────────────────────────────────────────────────
   String get familyTitle => _ru ? 'Семья' : 'Family';
   String get childrenSection => _ru ? 'ДЕТИ' : 'CHILDREN';
   String get addChild => _ru ? 'Добавить ребёнка' : 'Add child';
   String get noChildrenYet => _ru ? 'Детей ещё нет.' : 'No children added yet.';
   String get addFirstChild => _ru ? 'Добавить первого ребёнка' : 'Add your first child';
 
-  // ── Child profile ─────────────────────────────────────────────────────────
   String get childNotFound => _ru ? 'Ребёнок не найден' : 'Child not found';
   String get justTellCareNest => _ru ? 'Просто скажите CareNestAI' : 'Just tell CareNestAI';
   String childProfileHint(String name) => _ru
@@ -193,7 +182,6 @@ class AppStrings {
   String get recentNotes => _ru ? 'Последние заметки' : 'Recent notes';
   String get notesHint => _ru ? 'Запишите здоровье, предпочтения или наблюдения.' : 'Log a health note, food preference, or observation.';
 
-  // ── Add child screen ──────────────────────────────────────────────────────
   String get createFamilyFirst => _ru ? 'Сначала создайте семью.' : 'Create a family first.';
   String get couldNotAddChild => _ru ? 'Не удалось добавить ребёнка.' : 'Could not add child.';
   String get addChildTitle => _ru ? 'Добавить ребёнка' : 'Add child';
@@ -207,7 +195,6 @@ class AppStrings {
   String get ageInYears => _ru ? 'Возраст (лет)' : 'Age in years';
   String get enterAgeInYears => _ru ? 'Введите возраст в годах' : 'Enter age in years';
 
-  // ── Recommendations ───────────────────────────────────────────────────────
   String get recommendation => _ru ? 'Рекомендация' : 'Recommendation';
   String get recommendationNotFound => _ru ? 'Рекомендация не найдена' : 'Recommendation not found';
   String get why => _ru ? 'ПОЧЕМУ' : 'WHY';
@@ -220,7 +207,6 @@ class AppStrings {
   String get gotItIllLearn => _ru ? 'Понял — учусь' : 'Got it — I\'ll learn';
   String get notRelevant => _ru ? 'Не актуально' : 'Not relevant';
 
-  // ── Settings ──────────────────────────────────────────────────────────────
   String get settingsTitle => _ru ? 'Настройки' : 'Settings';
   String get sectionLanguage => _ru ? 'Язык' : 'Language';
   String get sectionConversation => _ru ? 'Разговор' : 'Conversation';
@@ -236,7 +222,6 @@ class AppStrings {
   String get members => _ru ? 'Участники' : 'Members';
   String get you => _ru ? 'Вы' : 'You';
 
-  // ── Plan screen ───────────────────────────────────────────────────────────
   String get thisWeek => _ru ? 'Эта неделя' : 'This week';
   String get noEventsForDay => _ru ? 'Нет событий на этот день.' : 'No events for this day.';
   String get noOutdoorEvents => _ru ? 'Нет событий на улице' : 'No outdoor events today';
@@ -254,10 +239,8 @@ class AppStrings {
   String get titleIsRequired => _ru ? 'Введите название' : 'Title is required';
   String get couldNotSave => _ru ? 'Не удалось сохранить.' : 'Could not save.';
 
-  // ── Bottom nav ───────────────────────────────────────────────────────────
   String get navChat => _ru ? 'Чат' : 'Chat';
 
-  // ── Notifications ────────────────────────────────────────────────────────
   String get notificationsTitle => _ru ? 'Уведомления' : 'Notifications';
   String get noNotifications => _ru
       ? 'Уведомлений пока нет.'

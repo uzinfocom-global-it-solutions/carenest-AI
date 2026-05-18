@@ -1,4 +1,4 @@
-using Backend.Application.Auth.Commands.Register;
+﻿using Backend.Application.Auth.Commands.Register;
 using Backend.Application.Children.Commands.CreateChild;
 using Backend.Application.Common.Exceptions;
 using Backend.Application.Families.Commands.AcceptInvitation;
@@ -39,7 +39,6 @@ public class FamilyFlowTests : TestBase
         var aliceFamily = await TestApp.SendAsync(new CreateFamilyCommand(
             "Alice's Family", alice.UserId, null, null, null));
 
-        // Bob tries to create a child in Alice's family — must be rejected.
         await Should.ThrowAsync<ForbiddenAccessException>(
             () => TestApp.SendAsync(new CreateChildCommand(aliceFamily.Id, "Charlie", 4, bob.UserId)));
     }
@@ -119,7 +118,6 @@ public class FamilyFlowTests : TestBase
         var family = await TestApp.SendAsync(new CreateFamilyCommand(
             "RBAC Test", alice.UserId, null, null, null));
 
-        // Bob is not a member at all; he tries to add Carol.
         await Should.ThrowAsync<ForbiddenAccessException>(
             () => TestApp.SendAsync(new AddFamilyMemberCommand(family.Id, carol.UserId, "Parent", bob.UserId)));
     }

@@ -17,9 +17,6 @@ class ChatController extends ChangeNotifier {
   List<ChatMessageModel> messages = [];
   bool isSending = false;
 
-  /// Starts a background poll that silently refreshes the message list every
-  /// [interval]. Proactive AI messages written by the backend workers become
-  /// visible without the user having to do anything.
   void startPolling({Duration interval = const Duration(minutes: 5)}) {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(interval, (_) => _silentRefresh());
@@ -30,14 +27,11 @@ class ChatController extends ChangeNotifier {
     _pollTimer = null;
   }
 
-  /// Refreshes history without showing a loading spinner or clearing messages.
-  /// New messages are appended; existing ones are kept in-place to avoid jumps.
   Future<void> _silentRefresh() async {
     if (activeChatId == null || isSending) return;
     try {
       final fresh = await _service.getHistory(activeChatId!);
       fresh.sort((a, b) => a.id.compareTo(b.id));
-      // Only update if there are genuinely new messages.
       if (fresh.length > messages.length ||
           (fresh.isNotEmpty &&
               messages.isNotEmpty &&
@@ -45,12 +39,9 @@ class ChatController extends ChangeNotifier {
         messages = fresh;
         notifyListeners();
       }
-    } catch (_) {
-      // Silent — don't show errors for background refreshes.
-    }
+    } catch (_) {}
   }
 
-  /// Called when the app comes to the foreground — pulls latest messages once.
   Future<void> refreshOnResume() => _silentRefresh();
 
   Future<void> initializeChat(
@@ -144,8 +135,6 @@ class ChatController extends ChangeNotifier {
       );
       messages.add(responseMsg);
     } catch (e) {
-      // Roll back the optimistic user bubble so the chat doesn't look like
-      // a half-sent message — the input bar will surface the error.
       messages.removeWhere((m) => m.id == tempId);
       error = e.toString();
     } finally {
@@ -154,8 +143,6 @@ class ChatController extends ChangeNotifier {
     }
   }
 
-  /// Called from main.dart's SSE listener. Handles real-time insertion of
-  /// messages created by backend workers (proactive AI events).
   void onChatSseEvent(String eventType, Map<String, dynamic> data) {
     if (eventType == 'chat_message_created') {
       final chatId = data['chatId'] as int?;
@@ -165,7 +152,6 @@ class ChatController extends ChangeNotifier {
           final msg = ChatMessageModel.fromJson(rawMsg);
           final alreadyExists = messages.any((m) => m.id == msg.id);
           if (!alreadyExists) {
-            // messages list is sorted ascending by id; append at end
             messages.add(msg);
             notifyListeners();
           }

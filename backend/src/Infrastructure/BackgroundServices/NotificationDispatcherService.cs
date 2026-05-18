@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,7 +60,6 @@ public sealed class NotificationDispatcherService : BackgroundService
 
         if (action.Metadata is not null) data["metadata"] = action.Metadata;
 
-        // Prefer explicit title from metadata (set by test mode and orchestrator)
         string? metaTitle = null;
         if (action.Metadata is not null)
         {
@@ -90,11 +89,9 @@ public sealed class NotificationDispatcherService : BackgroundService
             },
         };
 
-        // Send FCM push
         await push.SendToUserAsync(
             action.UserId, title, action.Text, action.Priority, data, ct);
 
-        // Publish SSE realtime event
         await sse.PublishAsync(action.UserId, new SseEvent(
             "voice_action_dispatch",
             JsonSerializer.Serialize(new

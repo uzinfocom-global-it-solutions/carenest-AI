@@ -24,8 +24,6 @@ class OnboardingController extends ChangeNotifier {
   final TokenStorage _storage;
   final AuthController _auth;
 
-  /// Read-only access for the bootstrap, which needs to ask the backend
-  /// whether the user already has a family before showing onboarding.
   OnboardingService get service => _service;
 
   bool isLoading = false;

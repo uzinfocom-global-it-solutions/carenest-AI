@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Entities;
 using Backend.Domain.Enums;
@@ -9,11 +9,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Backend.Infrastructure.BackgroundServices;
 
-/// <summary>
-/// Runs every 5 minutes. For each active family, finds CalendarEvents or ChildRoutines
-/// starting in the next 15-30 minutes. If an event is found and no checklist was already
-/// dispatched today for this family, it builds and sends a leave-home checklist.
-/// </summary>
 internal sealed class LeaveHomeChecklistWorker : PeriodicBackgroundService
 {
     public LeaveHomeChecklistWorker(
@@ -70,13 +65,11 @@ internal sealed class LeaveHomeChecklistWorker : PeriodicBackgroundService
         ILogger logger,
         CancellationToken ct)
     {
-        // Check if a checklist was already dispatched today for this family
         var alreadyDispatched = await db.LeaveHomeChecklists
             .AnyAsync(c => c.FamilyId == familyId && c.Date == todayUtc, ct);
 
         if (alreadyDispatched) return;
 
-        // Find the earliest upcoming CalendarEvent starting in the 15-30 min window
         var upcomingEvent = await db.CalendarEvents
             .Where(e => e.FamilyId == familyId
                         && e.StartDatetime >= windowStart
@@ -84,7 +77,6 @@ internal sealed class LeaveHomeChecklistWorker : PeriodicBackgroundService
             .OrderBy(e => e.StartDatetime)
             .FirstOrDefaultAsync(ct);
 
-        // Also check ChildRoutines if no calendar event found
         ChildRoutine? upcomingRoutine = null;
         if (upcomingEvent is null)
         {
@@ -103,12 +95,10 @@ internal sealed class LeaveHomeChecklistWorker : PeriodicBackgroundService
 
         if (upcomingEvent is null && upcomingRoutine is null) return;
 
-        // Determine childId from the triggering event
         int? triggeringChildId = upcomingEvent?.ChildId ?? upcomingRoutine?.ChildId;
         string triggerTitle = upcomingEvent?.Title ?? upcomingRoutine?.Title ?? "предстоящее событие";
         DateTimeOffset? eventStartsAt = upcomingEvent?.StartDatetime;
 
-        // Get checklist items: family-wide + child-specific
         var checklistItems = await db.FamilyItems
             .Where(i => i.FamilyId == familyId && i.IsActive && i.IsRequired
                         && (i.ChildId == null || (triggeringChildId.HasValue && i.ChildId == triggeringChildId.Value)))
@@ -116,10 +106,8 @@ internal sealed class LeaveHomeChecklistWorker : PeriodicBackgroundService
             .ThenBy(i => i.Name)
             .ToListAsync(ct);
 
-        // Build proactive context to get weather and medication info
         var ctx = await contextService.BuildContextAsync(familyId, ct);
 
-        // Get medications due within next 2 hours from proactive context
         var medicationsDueSoon = ctx.TodayMedications
             .Where(m =>
             {
@@ -128,17 +116,14 @@ internal sealed class LeaveHomeChecklistWorker : PeriodicBackgroundService
             })
             .ToList();
 
-        // Build checklist text in Russian
         var checklistText = BuildChecklistText(
             triggerTitle, eventStartsAt, checklistItems, ctx.Weather, medicationsDueSoon);
 
-        // Get active family members for VoiceActions
         var memberUserIds = await db.FamilyMembers
             .Where(m => m.FamilyId == familyId && m.Status == FamilyMemberStatusEnum.Active)
             .Select(m => m.UserId)
             .ToListAsync(ct);
 
-        // Create VoiceAction for each member
         foreach (var userId in memberUserIds)
         {
             var idemKey = VoiceActionDeduplicationService.BuildKey(
@@ -158,7 +143,6 @@ internal sealed class LeaveHomeChecklistWorker : PeriodicBackgroundService
                 ct);
         }
 
-        // Save to chat via IChatSynchronizationService
         await chatSync.SaveProactiveMessageAsync(
             familyId,
             checklistText,
@@ -171,7 +155,6 @@ internal sealed class LeaveHomeChecklistWorker : PeriodicBackgroundService
             },
             ct: ct);
 
-        // Record LeaveHomeChecklist in DB to prevent duplicates today
         var itemNames = checklistItems.Select(i => i.Name).ToList();
         db.LeaveHomeChecklists.Add(new LeaveHomeChecklist
         {
@@ -204,7 +187,6 @@ internal sealed class LeaveHomeChecklistWorker : PeriodicBackgroundService
             : "";
         parts.Add($"Скоро{timeStr} — {triggerTitle}. Не забудьте взять с собой:");
 
-        // Add checklist items grouped by category
         if (checklistItems.Count > 0)
         {
             var grouped = checklistItems
@@ -232,7 +214,6 @@ internal sealed class LeaveHomeChecklistWorker : PeriodicBackgroundService
             parts.Add("Проверьте стандартный список вещей.");
         }
 
-        // Weather-based additions
         if (weather is not null)
         {
             if (weather.IsRaining || weather.RainChancePercent > 60)
@@ -244,7 +225,6 @@ internal sealed class LeaveHomeChecklistWorker : PeriodicBackgroundService
                 parts.Add("Возьмите воду — на улице жарко.");
         }
 
-        // Medications due soon
         foreach (var med in medicationsDue)
         {
             parts.Add($"Не забудьте лекарство: {med.MedicationName} ({med.Dosage}) для {med.ChildName}.");

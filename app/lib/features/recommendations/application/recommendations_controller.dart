@@ -13,7 +13,6 @@ class RecommendationsController extends ChangeNotifier {
   String? error;
   List<RecommendationModel> recommendations = const [];
 
-  // Request versioning: only the latest load wins.
   int _loadVersion = 0;
 
   Future<void> loadForChildren(List<ChildModel> children) async {
@@ -31,7 +30,6 @@ class RecommendationsController extends ChangeNotifier {
       final all = <RecommendationModel>[];
       for (final child in children) {
         final recs = await _service.generateForChild(child.id);
-        // Check version after each async gap — another load may have started.
         if (v != _loadVersion) {
           debugPrint('[Recs] Stale response discarded mid-load (v$v)');
           return;

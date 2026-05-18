@@ -1,13 +1,10 @@
-using Backend.Application.Common.Interfaces;
+﻿using Backend.Application.Common.Interfaces;
 using Backend.Domain.Entities;
 using Backend.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace Backend.Infrastructure.Services;
 
-/// Predicts future escalation probability for an active monitoring session.
-/// Combines session age, missed follow-ups, child age, environmental signals,
-/// chronic conditions, and AI memory of recurring symptoms.
 public sealed class PredictiveHealthRiskService : IPredictiveHealthRiskService
 {
     private readonly ILogger<PredictiveHealthRiskService> _logger;
@@ -27,29 +24,24 @@ public sealed class PredictiveHealthRiskService : IPredictiveHealthRiskService
         var factors = new List<string>();
         double prob = BaseEscalationProbability(session.Severity);
 
-        // Session age — longer active = higher unresolved risk
         var durationHours = (DateTimeOffset.UtcNow - session.StartedAt).TotalHours;
         if (durationHours > 12)     { prob += 0.15; factors.Add("issue >12h unresolved"); }
         else if (durationHours > 8) { prob += 0.10; factors.Add("issue >8h unresolved"); }
         else if (durationHours > 4) { prob += 0.05; factors.Add("issue >4h unresolved"); }
 
-        // Missed follow-ups — each one signals non-engagement
         prob += session.MissedFollowUps * 0.06;
         if (session.MissedFollowUps >= 2)
             factors.Add($"{session.MissedFollowUps} missed check-in(s)");
 
-        // Lifecycle phase context
         if (session.LifecyclePhase is MonitoringLifecyclePhase.Escalated or MonitoringLifecyclePhase.Critical)
         { prob += 0.15; factors.Add($"lifecycle={session.LifecyclePhase}"); }
 
-        // Child age — younger children escalate faster
         if (child is not null)
         {
             if (child.AgeYears <= 1)      { prob += 0.25; factors.Add("infant (<1y)"); }
             else if (child.AgeYears <= 3) { prob += 0.15; factors.Add("toddler (<3y)"); }
             else if (child.AgeYears <= 6) { prob += 0.07; factors.Add("young child (<6y)"); }
 
-            // Respiratory sensitivity compound
             bool hasRespiratory = child.Sensitivities.Any(s =>
                 s.Contains("астм", StringComparison.OrdinalIgnoreCase) ||
                 s.Contains("asthma", StringComparison.OrdinalIgnoreCase) ||
@@ -62,7 +54,6 @@ public sealed class PredictiveHealthRiskService : IPredictiveHealthRiskService
                 factors.Add($"respiratory sensitivity + AQI {weather.AqiIndex}");
             }
 
-            // Heat sensitivity in extreme heat
             if (child.Sensitivities.Any(s =>
                     s.Contains("жар", StringComparison.OrdinalIgnoreCase) ||
                     s.Contains("heat", StringComparison.OrdinalIgnoreCase)) &&
@@ -72,7 +63,6 @@ public sealed class PredictiveHealthRiskService : IPredictiveHealthRiskService
                 factors.Add($"heat sensitivity + {weather.TemperatureCelsius:0}°C");
             }
 
-            // Cold sensitivity in freezing weather
             if (child.Sensitivities.Any(s =>
                     s.Contains("холод", StringComparison.OrdinalIgnoreCase) ||
                     s.Contains("cold", StringComparison.OrdinalIgnoreCase)) &&
@@ -83,7 +73,6 @@ public sealed class PredictiveHealthRiskService : IPredictiveHealthRiskService
             }
         }
 
-        // Environmental compound risks for respiratory issues
         if (weather is not null)
         {
             if (weather.AqiIndex > 150 &&
@@ -102,14 +91,12 @@ public sealed class PredictiveHealthRiskService : IPredictiveHealthRiskService
             }
         }
 
-        // AI memory — prior escalation history for this issue type
         bool priorEscalation = familyMemory.Any(m =>
             m.Key.Contains(session.IssueType.ToString(), StringComparison.OrdinalIgnoreCase) &&
             (m.MemoryType == AIMemoryType.SymptomHistory || m.MemoryType == AIMemoryType.BehaviorPattern));
 
         if (priorEscalation) { prob += 0.10; factors.Add("recurring symptom pattern in memory"); }
 
-        // Persistent high-severity with many follow-ups
         if (session.FollowUpCount >= 4 && session.Severity >= MonitoringSeverity.High)
         { prob += 0.08; factors.Add("persistent high-severity (≥4 follow-ups)"); }
 

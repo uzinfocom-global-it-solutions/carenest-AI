@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Entities;
 using Backend.Domain.Enums;
@@ -43,7 +43,6 @@ public sealed class VoiceActionService : IVoiceActionService
         string? idempotencyKey = null,
         CancellationToken ct = default)
     {
-        // Deduplication: if idempotencyKey is provided, skip if already exists
         if (idempotencyKey is not null && await _dedup.IsDuplicateAsync(idempotencyKey, ct))
             return null;
 
@@ -68,7 +67,6 @@ public sealed class VoiceActionService : IVoiceActionService
         _db.VoiceActions.Add(action);
         await _db.SaveChangesAsync(ct);
 
-        // Scheduled reminders stay in DB; ScheduledReminderWorker will enqueue them when due.
         var isScheduled = scheduledAt.HasValue && scheduledAt.Value > DateTimeOffset.UtcNow.AddSeconds(10);
         if (!isScheduled)
             await _queue.EnqueueAsync(action, ct);
