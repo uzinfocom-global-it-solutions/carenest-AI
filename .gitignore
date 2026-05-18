@@ -1,0 +1,50 @@
+# ── Secrets & API keys ──────────────────────────────────────────────────────
+
+# Backend environment (LLM token, DB password, etc.)
+backend/.env
+backend/.env.local
+backend/.env.production
+
+# ASP.NET user secrets & production overrides
+backend/src/Web/appsettings.Production.json
+backend/src/Web/appsettings.Local.json
+**/appsettings.*.Local.json
+**/secrets.json
+
+# Firebase service-account keys (never commit these)
+backend/src/Web/firebase-key.json
+backend/src/Infrastructure/firebase-key.json
+*-firebase-adminsdk-*.json
+carenestai-21b17-firebase-adminsdk-*.json
+
+# Flutter app secrets
+app/env.json
+app/lib/env.dart
+app/android/app/google-services.json
+app/ios/Runner/GoogleService-Info.plist
+
+# ── Build artifacts ──────────────────────────────────────────────────────────
+
+# .NET
+backend/**/bin/
+backend/**/obj/
+backend/artifacts/
+
+# Flutter / Dart
+app/build/
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/pubspec.lock
+
+# ── IDE & OS ─────────────────────────────────────────────────────────────────
+.vs/
+.vscode/
+*.user
+.idea/
+*.DS_Store
+Thumbs.db
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+*.log
+*.tmp

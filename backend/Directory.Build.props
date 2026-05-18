@@ -1,0 +1,14 @@
+﻿<!-- See https://aka.ms/dotnet/msbuild/customize for more details on customizing your build -->
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Exclude NuGet audit warnings from TreatWarningsAsErrors — they should be visible but not block builds -->
+    <WarningsNotAsErrors>NU1900;NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+    <!-- Only audit packages directly referenced, not transitive deps -->
+    <NuGetAuditMode>direct</NuGetAuditMode>
+    <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>

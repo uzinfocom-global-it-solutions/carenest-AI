@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareNestAI — System Debug Panel</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #06b6d4;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+        h1 { margin: 0; font-size: 1.6rem; }
+        h2 { margin: 0 0 14px; font-size: 1.05rem; color: #fff; display: flex; align-items: center; gap: 8px; }
+        h3 { font-size: 0.95rem; color: var(--text-muted); margin: 12px 0 8px; border-top: 1px solid var(--border); padding-top: 10px; }
+        .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+        .tab { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-size: 0.85rem; background: var(--card-bg); color: var(--text-muted); transition: all 0.15s; }
+        .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+        .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 4px; font-size: 0.82rem; color: var(--text-muted); }
+        input, select, textarea { width: 100%; padding: 7px 10px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: monospace; font-size: 0.85rem; }
+        textarea { resize: vertical; min-height: 70px; }
+        button { background: var(--primary); color: #fff; border: none; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.85rem; transition: background 0.15s; margin: 2px; }
+        button:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--danger); }
+        .btn-success { background: var(--success); }
+        .btn-warning { background: var(--warning); color: #000; }
+        .btn-info { background: var(--info); }
+        .btn-sm { padding: 4px 10px; font-size: 0.78rem; }
+        .flex { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+        .flex > * { flex: 1; min-width: 120px; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 0.72rem; font-weight: 600; }
+        .badge-green { background: #064e3b; color: var(--success); }
+        .badge-red { background: #450a0a; color: var(--danger); }
+        .badge-yellow { background: #451a03; color: var(--warning); }
+        .badge-blue { background: #0c2461; color: var(--info); }
+        .log-panel { background: #000; border: 1px solid var(--border); border-radius: 8px; padding: 14px; height: 260px; overflow-y: auto; font-family: monospace; font-size: 0.82rem; }
+        .log-entry { margin-bottom: 6px; border-bottom: 1px solid #1a2234; padding-bottom: 6px; word-wrap: break-word; }
+        .log-time { color: var(--text-muted); margin-right: 8px; }
+        .log-method { color: #a78bfa; font-weight: bold; margin-right: 4px; }
+        .log-url { color: #60a5fa; margin-right: 6px; }
+        .ok { color: var(--success); }
+        .err { color: var(--danger); }
+        .sse-panel { background: #000; border: 1px solid var(--border); border-radius: 8px; padding: 14px; height: 220px; overflow-y: auto; font-family: monospace; font-size: 0.82rem; }
+        .sse-event { padding: 4px 0; border-bottom: 1px solid #1a2234; }
+        .sse-type { color: #a78bfa; }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--danger); }
+        .status-dot.connected { background: var(--success); }
+        .section-header { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 12px; }
+        pre { margin: 4px 0 0; color: var(--text-muted); white-space: pre-wrap; max-height: 80px; overflow-y: auto; font-size: 0.78rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div>
+            <h1>🧠 CareNestAI</h1>
+            <p style="color:var(--text-muted);margin:4px 0 0;font-size:0.85rem;">System Internal Debug Panel — Notification & Voice Infrastructure</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input id="api-base" type="text" value="http://localhost:5204"
+                style="width:220px;font-family:monospace;font-size:0.8rem;"
+                title="Backend base URL — change if running on a different port"
+                oninput="API=this.value.replace(/\/$/,'')">
+            <span class="status-dot" id="sse-dot"></span>
+            <span id="sse-status" style="font-size:0.82rem;color:var(--text-muted);">SSE disconnected</span>
+            <button onclick="clearLogs()" class="btn-sm">Clear Logs</button>
+        </div>
+    </header>
+
+    <!-- TABS -->
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('auth')">🔑 Auth</div>
+        <div class="tab" onclick="switchTab('push')">🔔 Push / FCM</div>
+        <div class="tab" onclick="switchTab('voice')">🎙 Voice Actions</div>
+        <div class="tab" onclick="switchTab('medication')">💊 Medication</div>
+        <div class="tab" onclick="switchTab('escalation')">⚠️ Escalation</div>
+        <div class="tab" onclick="switchTab('sse')">📡 SSE Inspector</div>
+        <div class="tab" onclick="switchTab('data')">📊 Data / State</div>
+        <div class="tab" onclick="switchTab('ai')">🤖 AI Engine</div>
+        <div class="tab" onclick="switchTab('testmode')" id="tab-btn-testmode">🧪 AI Test Mode</div>
+    </div>
+
+    <!-- AUTH TAB -->
+    <div id="tab-auth" class="tab-content active">
+        <div class="grid">
+            <div class="card">
+                <h2>🔑 Authentication</h2>
+                <div class="form-group">
+                    <label>JWT Token</label>
+                    <textarea id="jwt-token" placeholder="Paste JWT or login below…" style="min-height:100px;"></textarea>
+                </div>
+                <div class="flex">
+                    <div class="form-group"><label>Email</label><input type="email" id="login-email" value="firdavsyuldoshov439@gmail.com"></div>
+                    <div class="form-group"><label>Password</label><input type="password" id="login-password" value="fedya8267#"></div>
+                </div>
+                <button onclick="doLogin()">Login & Get Token</button>
+                <button onclick="apiCall('GET', '/auth/me')" class="btn-info">Get Me</button>
+                <button onclick="pingMe()" class="btn-success" style="margin-top:10px;width:100%;padding:10px;">🔔 Ping Me — Full FCM→TTS Test</button>
+            </div>
+            <div class="card">
+                <h2>📌 Context</h2>
+                <div class="flex">
+                    <div class="form-group"><label>Family ID</label><input type="number" id="ctx-family" value="1"></div>
+                    <div class="form-group"><label>Child ID</label><input type="number" id="ctx-child" value="1"></div>
+                </div>
+                <div class="flex">
+                    <div class="form-group"><label>Recommendation ID</label><input type="number" id="ctx-rec" value="1"></div>
+                    <div class="form-group"><label>Voice Action ID</label><input type="number" id="ctx-voice-id" value="1"></div>
+                </div>
+                <button onclick="apiCall('GET', '/families/' + fid())">Get Family</button>
+                <button onclick="apiCall('GET', '/children/by-family/' + fid())">List Children</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PUSH TAB -->
+    <div id="tab-push" class="tab-content">
+        <div class="grid">
+            <div class="card" style="border-color:var(--success);">
+                <h2>⚡ Quick Pipeline Test</h2>
+                <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px;">Sends FCM push + creates VoiceAction + triggers TTS on the Flutter app in one shot.</p>
+                <button onclick="pingMe()" class="btn-success" style="width:100%;padding:12px;font-size:1rem;">🔔 Ping Me — FCM → Flutter → TTS</button>
+            </div>
+            <div class="card">
+                <h2>🔔 Send Push Notification</h2>
+                <div class="form-group"><label>Target User ID (blank = me)</label><input type="text" id="push-target-user" placeholder="Leave blank for current user"></div>
+                <div class="form-group"><label>Title</label><input type="text" id="push-title" value="Test Push"></div>
+                <div class="form-group"><label>Body</label><textarea id="push-body">This is a test push from the debug panel</textarea></div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select id="push-priority">
+                        <option value="Normal">Normal</option>
+                        <option value="Low">Low</option>
+                        <option value="High">High</option>
+                        <option value="Emergency">Emergency 🚨</option>
+                    </select>
+                </div>
+                <button onclick="sendTestPush()">Send Push</button>
+                <button onclick="sendEmergencyPush()" class="btn-danger">Send Emergency Push 🚨</button>
+            </div>
+            <div class="card">
+                <h2>📱 Device Tokens</h2>
+                <button onclick="apiCall('GET', '/debug/devices')">List My Tokens</button>
+                <button onclick="apiCall('GET', '/api/v1/devices')">List via API</button>
+                <h3>Register Token</h3>
+                <div class="form-group"><label>FCM Token</label><input type="text" id="reg-token" placeholder="FCM token…"></div>
+                <div class="flex">
+                    <div class="form-group">
+                        <label>Platform</label>
+                        <select id="reg-platform"><option>android</option><option>ios</option><option>web</option></select>
+                    </div>
+                    <div class="form-group"><label>Device Name</label><input type="text" id="reg-device" value="Debug Browser"></div>
+                </div>
+                <button onclick="registerToken()">Register Token</button>
+                <button onclick="unregisterToken()" class="btn-danger">Unregister</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VOICE TAB -->
+    <div id="tab-voice" class="tab-content">
+        <div class="grid">
+            <div class="card">
+                <h2>🎙 Create Voice Action</h2>
+                <div class="form-group"><label>Text (TTS will speak this)</label><textarea id="va-text">Время принять витамин D3. Пожалуйста подтвердите.</textarea></div>
+                <div class="flex">
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="va-type">
+                            <option value="Custom">Custom</option>
+                            <option value="MedicationReminder">MedicationReminder</option>
+                            <option value="ProactiveRecommendation">ProactiveRecommendation</option>
+                            <option value="CalendarAlert">CalendarAlert</option>
+                            <option value="EmergencyAlert">EmergencyAlert</option>
+                            <option value="RoutineReminder">RoutineReminder</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Priority</label>
+                        <select id="va-priority">
+                            <option value="Normal">Normal</option>
+                            <option value="Low">Low</option>
+                            <option value="High">High</option>
+                            <option value="Emergency">Emergency</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex">
+                    <div class="form-group"><label>Requires Confirm</label><select id="va-confirm"><option value="true">Yes</option><option value="false">No</option></select></div>
+                    <div class="form-group"><label>Escalation</label><select id="va-escalate"><option value="true">Yes</option><option value="false">No</option></select></div>
+                </div>
+                <button onclick="createVoiceAction()">Create & Dispatch</button>
+                <button onclick="testVoiceDebug()" class="btn-info">Quick Test Voice</button>
+            </div>
+            <div class="card">
+                <h2>📋 Voice Action Queue</h2>
+                <button onclick="apiCall('GET', '/debug/voice/queue')">View Queue</button>
+                <button onclick="apiCall('GET', '/api/v1/voice-actions/pending')">Pending Actions</button>
+                <button onclick="apiCall('GET', '/api/v1/voice-actions/timeline')">Timeline</button>
+                <h3>Confirm / Skip Action</h3>
+                <div class="flex">
+                    <div class="form-group"><label>Voice Action ID</label><input type="number" id="va-action-id" value="1"></div>
+                </div>
+                <button onclick="confirmAction()" class="btn-success">Confirm</button>
+                <button onclick="skipAction()" class="btn-warning">Skip</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MEDICATION TAB -->
+    <div id="tab-medication" class="tab-content">
+        <div class="grid">
+            <div class="card">
+                <h2>💊 Create Medication Schedule</h2>
+                <div class="flex">
+                    <div class="form-group"><label>Medication Name</label><input type="text" id="med-name" value="Vitamin D3"></div>
+                    <div class="form-group"><label>Dosage</label><input type="text" id="med-dosage" value="1 tablet"></div>
+                </div>
+                <div class="flex">
+                    <div class="form-group"><label>Time (HH:MM)</label><input type="time" id="med-time" value="08:00"></div>
+                    <div class="form-group"><label>Timezone</label><input type="text" id="med-tz" value="Europe/Moscow"></div>
+                </div>
+                <div class="flex">
+                    <div class="form-group">
+                        <label>Repeat Pattern</label>
+                        <select id="med-repeat"><option>daily</option><option>weekdays</option><option>weekends</option></select>
+                    </div>
+                    <div class="form-group"><label>Child ID</label><input type="number" id="med-child" value="1"></div>
+                </div>
+                <div class="flex">
+                    <div class="form-group"><label>Voice</label><select id="med-voice"><option value="true">Yes</option><option value="false">No</option></select></div>
+                    <div class="form-group"><label>Push</label><select id="med-push"><option value="true">Yes</option><option value="false">No</option></select></div>
+                    <div class="form-group"><label>Confirm Required</label><select id="med-confirm"><option value="true">Yes</option><option value="false">No</option></select></div>
+                    <div class="form-group"><label>Escalation</label><select id="med-escalate"><option value="true">Yes</option><option value="false">No</option></select></div>
+                </div>
+                <button onclick="createMedication()">Create Schedule</button>
+            </div>
+            <div class="card">
+                <h2>⚡ Medication Triggers</h2>
+                <button onclick="apiCall('GET', '/api/v1/medications')">List My Schedules</button>
+                <h3>Trigger Manually</h3>
+                <div class="form-group"><label>Schedule ID</label><input type="number" id="med-schedule-id" value="1"></div>
+                <button onclick="triggerMedication()" class="btn-warning">Trigger Now (Debug)</button>
+                <h3>Toggle Schedule</h3>
+                <div class="form-group"><label>Schedule ID</label><input type="number" id="med-toggle-id" value="1"></div>
+                <button onclick="toggleMedication()">Toggle Active/Inactive</button>
+                <button onclick="deleteMedication()" class="btn-danger">Delete Schedule</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ESCALATION TAB -->
+    <div id="tab-escalation" class="tab-content">
+        <div class="grid">
+            <div class="card">
+                <h2>⚠️ Escalation Testing</h2>
+                <p style="font-size:0.83rem;color:var(--text-muted);">Forces a delivered VoiceAction into "overdue" state so the escalation engine picks it up within 2 minutes.</p>
+                <div class="form-group"><label>Voice Action ID</label><input type="number" id="esc-action-id" value="1"></div>
+                <button onclick="testEscalation()" class="btn-danger">Trigger Escalation Test</button>
+                <h3>Escalation State</h3>
+                <button onclick="apiCall('GET', '/debug/escalation/state')">View Active Escalations</button>
+            </div>
+            <div class="card">
+                <h2>📋 Escalation Timeline</h2>
+                <p style="font-size:0.83rem;color:var(--text-muted);">Escalation steps:</p>
+                <ul style="font-size:0.83rem;color:var(--text-muted);padding-left:16px;">
+                    <li>Step 0 → unconfirmed</li>
+                    <li>Step 1 (10min) → resend to original user</li>
+                    <li>Step 2 (30min) → notify secondary parent</li>
+                    <li>Step 3 (60min) → emergency push to all family</li>
+                </ul>
+                <button onclick="apiCall('GET', '/api/v1/voice-actions/timeline')">View Full Timeline</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SSE TAB -->
+    <div id="tab-sse" class="tab-content">
+        <div class="grid">
+            <div class="card">
+                <h2>📡 SSE Connection</h2>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                    <span class="status-dot" id="sse-dot2"></span>
+                    <span id="sse-label" style="font-size:0.85rem;">Disconnected</span>
+                </div>
+                <button onclick="connectSse()" class="btn-success">Connect SSE</button>
+                <button onclick="disconnectSse()" class="btn-danger">Disconnect</button>
+                <button onclick="document.getElementById('sse-log').innerHTML=''">Clear Events</button>
+                <h3>Received Events</h3>
+                <div id="sse-log" class="sse-panel"></div>
+            </div>
+            <div class="card">
+                <h2>📤 SSE Test Publish</h2>
+                <div class="form-group"><label>Event Type</label><input type="text" id="sse-event-type" value="debug_notification"></div>
+                <div class="form-group"><label>Message</label><textarea id="sse-message">Hello from debug panel</textarea></div>
+                <button onclick="publishSseEvent()">Publish to SSE</button>
+                <h3>SSE Connection Info</h3>
+                <button onclick="apiCall('GET', '/debug/sse/connections')">Check My Connections</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA TAB -->
+    <div id="tab-data" class="tab-content">
+        <div class="grid-3">
+            <div class="card">
+                <h2>📊 Notification Delivery</h2>
+                <button onclick="apiCall('GET', '/debug/delivery')">Delivery Status</button>
+                <button onclick="apiCall('GET', '/notifications')">All Notifications</button>
+                <div class="form-group" style="margin-top:10px;"><label>Notification Delivery ID</label><input type="number" id="notif-id" value="1"></div>
+                <button onclick="apiCall('POST', '/notifications/' + document.getElementById('notif-id').value + '/read')">Mark Read</button>
+                <button onclick="apiCall('POST', '/notifications/read-all')">Mark All Read</button>
+            </div>
+            <div class="card">
+                <h2>📱 Devices & Tokens</h2>
+                <button onclick="apiCall('GET', '/debug/devices')">My Device Tokens</button>
+                <button onclick="apiCall('GET', '/api/v1/devices')">API Tokens</button>
+            </div>
+            <div class="card">
+                <h2>🗂 Family & Children</h2>
+                <button onclick="apiCall('GET', '/auth/me')">Get Me</button>
+                <button onclick="apiCall('GET', '/families/' + fid())">Family Info</button>
+                <button onclick="apiCall('GET', '/children/by-family/' + fid())">Children</button>
+                <button onclick="apiCall('GET', '/children/' + cid())">Child Detail</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI TAB -->
+    <div id="tab-ai" class="tab-content">
+        <div class="grid">
+            <div class="card">
+                <h2>🤖 AI Extraction & Recommendations</h2>
+                <div class="form-group"><label>Chat Message</label><textarea id="ai-message">Сын кашляет с температурой 38.5, второй день.</textarea></div>
+                <div class="form-group"><label>Chat Message ID</label><input type="number" id="ai-msg-id" value="1"></div>
+                <button onclick="runAIExtraction()">Run Extraction</button>
+                <button onclick="generateRecommendations()">Generate Recommendations</button>
+                <button onclick="apiCall('GET', '/recommendations/child/' + cid())">List Recommendations</button>
+            </div>
+            <div class="card">
+                <h2>🌦 Environmental</h2>
+                <div class="flex">
+                    <div class="form-group"><label>Lat</label><input type="text" id="weather-lat" value="55.7558"></div>
+                    <div class="form-group"><label>Lon</label><input type="text" id="weather-lon" value="37.6176"></div>
+                </div>
+                <button onclick="apiCall('GET', '/weather/current?lat=' + document.getElementById('weather-lat').value + '&lon=' + document.getElementById('weather-lon').value)">Get Weather</button>
+                <h3>Legacy Debug</h3>
+                <div class="form-group"><label>Recommendation ID</label><input type="number" id="legacy-rec-id" value="1"></div>
+                <button onclick="apiCall('POST', '/api/debug/dispatch-notification', { recommendationId: parseInt(document.getElementById('legacy-rec-id').value) })">Dispatch Recommendation Notification</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI TEST MODE TAB -->
+    <div id="tab-testmode" class="tab-content">
+        <!-- Status bar -->
+        <div id="tm-status-bar" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;background:var(--card-bg);border:1px solid var(--border);margin-bottom:16px;">
+            <span id="tm-dot" class="status-dot"></span>
+            <span id="tm-status-label" style="font-weight:600;font-size:0.9rem;">AI Test Mode — STOPPED</span>
+            <span id="tm-interval-label" style="color:var(--text-muted);font-size:0.82rem;"></span>
+            <span style="flex:1"></span>
+            <span id="tm-notif-rate" style="font-size:0.82rem;color:var(--warning);font-family:monospace;"></span>
+        </div>
+
+        <!-- Controls + live counters -->
+        <div class="grid-3" style="margin-bottom:16px;">
+            <div class="card">
+                <h2>⚙️ Controls</h2>
+                <div class="form-group">
+                    <label>Interval (seconds)</label>
+                    <input type="number" id="tm-interval" value="5" min="3" max="60">
+                </div>
+                <button class="btn-success" style="width:100%;padding:10px;font-size:0.95rem;" onclick="startTestMode()">▶ Start Test Mode</button>
+                <button class="btn-danger"  style="width:100%;padding:10px;font-size:0.95rem;margin-top:6px;" onclick="stopTestMode()">⏹ Stop Test Mode</button>
+                <button class="btn-info"    style="width:100%;padding:8px;margin-top:6px;" onclick="refreshTestModeStats()">↻ Refresh Stats</button>
+            </div>
+            <div class="card">
+                <h2>📊 Live Counters</h2>
+                <div id="tm-counters" style="font-family:monospace;font-size:0.88rem;line-height:2;">
+                    <div>Events: <span id="tm-c-events" style="color:var(--info);">–</span></div>
+                    <div>FCM Push: <span id="tm-c-push" style="color:var(--success);">–</span></div>
+                    <div>SSE events: <span id="tm-c-sse" style="color:var(--warning);">–</span></div>
+                    <div>Voice actions: <span id="tm-c-voice" style="color:#a78bfa;">–</span></div>
+                    <div>Escalations: <span id="tm-c-esc" style="color:var(--danger);">–</span></div>
+                    <div>Suppressed: <span id="tm-c-sup" style="color:var(--text-muted);">–</span></div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>🔄 Active Scenarios</h2>
+                <div id="tm-scenarios" style="font-size:0.82rem;line-height:1.8;">
+                    <div style="color:var(--text-muted);">Awaiting first cycle…</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Reasoning stream + Recent events -->
+        <div class="grid" style="margin-bottom:16px;">
+            <div class="card">
+                <h2>🧠 AI Reasoning Stream</h2>
+                <div id="tm-reasoning" class="log-panel" style="height:220px;"></div>
+            </div>
+            <div class="card">
+                <h2>📋 Latest Generated Notifications</h2>
+                <div id="tm-events" class="log-panel" style="height:220px;"></div>
+            </div>
+        </div>
+
+        <!-- Suppression decisions -->
+        <div class="card">
+            <h2>🚫 Suppression & Escalation Decisions</h2>
+            <div id="tm-suppressions" class="log-panel" style="height:160px;"></div>
+        </div>
+    </div>
+
+    <!-- GLOBAL LOG -->
+    <h2 style="margin-top:24px;">📝 Activity Log</h2>
+    <div id="logs" class="log-panel"></div>
+</div>
+
+<script>
+let API = document.getElementById('api-base').value;
+let sseSource = null;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fid() { return document.getElementById('ctx-family').value; }
+function cid() { return document.getElementById('ctx-child').value; }
+function getToken() { return document.getElementById('jwt-token').value; }
+
+function log(method, url, status, body) {
+    const panel = document.getElementById('logs');
+    const d = document.createElement('div');
+    d.className = 'log-entry';
+    const t = new Date().toLocaleTimeString();
+    let pretty = body;
+    try { pretty = JSON.stringify(JSON.parse(body), null, 2); } catch {}
+    const cls = status >= 200 && status < 300 ? 'ok' : 'err';
+    d.innerHTML = `<span class="log-time">[${t}]</span><span class="log-method">${method}</span><span class="log-url">${url}</span><span class="${cls}">→ ${status}</span><pre>${pretty}</pre>`;
+    panel.prepend(d);
+}
+
+function clearLogs() { document.getElementById('logs').innerHTML = ''; }
+
+async function apiCall(method, path, body = null, cb = null) {
+    const hdrs = { 'Content-Type': 'application/json' };
+    const t = getToken();
+    if (t) hdrs['Authorization'] = 'Bearer ' + t;
+    const opts = { method, headers: hdrs };
+    if (body) opts.body = JSON.stringify(body);
+    try {
+        const r = await fetch(API + path, opts);
+        const txt = await r.text();
+        log(method, path, r.status, txt);
+        if (cb && r.ok) cb(txt);
+        return r;
+    } catch(e) { log(method, path, 0, e.toString()); }
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function doLogin() {
+    return new Promise(resolve => {
+        apiCall('POST', '/auth/login', {
+            email: document.getElementById('login-email').value,
+            password: document.getElementById('login-password').value,
+        }, txt => {
+            try {
+                const d = JSON.parse(txt);
+                if (d.accessToken) document.getElementById('jwt-token').value = d.accessToken;
+            } catch {}
+            resolve();
+        }).then(r => { if (!r || !r.ok) resolve(); });
+    });
+}
+
+async function pingMe() {
+    if (!getToken()) await doLogin();
+    apiCall('POST', '/debug/ping-me');
+}
+
+// ── Push ──────────────────────────────────────────────────────────────────────
+function sendTestPush() {
+    apiCall('POST', '/debug/push/test', {
+        targetUserId: document.getElementById('push-target-user').value || null,
+        title: document.getElementById('push-title').value,
+        body: document.getElementById('push-body').value,
+        priority: document.getElementById('push-priority').value,
+    });
+}
+
+function sendEmergencyPush() {
+    apiCall('POST', '/debug/push/test', {
+        targetUserId: null,
+        title: '🚨 ЭКСТРЕННОЕ УВЕДОМЛЕНИЕ',
+        body: document.getElementById('push-body').value || 'Emergency test from debug panel',
+        priority: 'Emergency',
+    });
+}
+
+function registerToken() {
+    apiCall('POST', '/api/v1/devices/register', {
+        token: document.getElementById('reg-token').value,
+        platform: document.getElementById('reg-platform').value,
+        deviceName: document.getElementById('reg-device').value,
+    });
+}
+
+function unregisterToken() {
+    apiCall('POST', '/api/v1/devices/unregister', {
+        token: document.getElementById('reg-token').value,
+    });
+}
+
+// ── Voice Actions ─────────────────────────────────────────────────────────────
+function createVoiceAction() {
+    apiCall('POST', '/api/v1/voice-actions', {
+        type: document.getElementById('va-type').value,
+        text: document.getElementById('va-text').value,
+        priority: document.getElementById('va-priority').value,
+        requiresConfirmation: document.getElementById('va-confirm').value === 'true',
+        escalationEnabled: document.getElementById('va-escalate').value === 'true',
+    });
+}
+
+function testVoiceDebug() {
+    apiCall('POST', '/debug/voice/test', {
+        text: document.getElementById('va-text').value,
+        priority: document.getElementById('va-priority').value,
+        requiresConfirmation: true,
+        escalationEnabled: true,
+    });
+}
+
+function confirmAction() {
+    const id = document.getElementById('va-action-id').value;
+    apiCall('POST', '/api/v1/voice-actions/' + id + '/confirm');
+}
+
+function skipAction() {
+    const id = document.getElementById('va-action-id').value;
+    apiCall('POST', '/api/v1/voice-actions/' + id + '/skip');
+}
+
+// ── Medication ────────────────────────────────────────────────────────────────
+function createMedication() {
+    const time = document.getElementById('med-time').value;
+    apiCall('POST', '/api/v1/medications', {
+        childId: parseInt(document.getElementById('med-child').value),
+        medicationName: document.getElementById('med-name').value,
+        dosage: document.getElementById('med-dosage').value,
+        scheduleTime: time + ':00',
+        timezone: document.getElementById('med-tz').value,
+        repeatPattern: document.getElementById('med-repeat').value,
+        voiceEnabled: document.getElementById('med-voice').value === 'true',
+        pushEnabled: document.getElementById('med-push').value === 'true',
+        requiresConfirmation: document.getElementById('med-confirm').value === 'true',
+        escalationEnabled: document.getElementById('med-escalate').value === 'true',
+    });
+}
+
+function triggerMedication() {
+    apiCall('POST', '/debug/triggers/medication', {
+        scheduleId: parseInt(document.getElementById('med-schedule-id').value),
+    });
+}
+
+function toggleMedication() {
+    const id = document.getElementById('med-toggle-id').value;
+    apiCall('PUT', '/api/v1/medications/' + id + '/toggle');
+}
+
+function deleteMedication() {
+    const id = document.getElementById('med-toggle-id').value;
+    apiCall('DELETE', '/api/v1/medications/' + id);
+}
+
+// ── Escalation ────────────────────────────────────────────────────────────────
+function testEscalation() {
+    apiCall('POST', '/debug/escalation/test', {
+        voiceActionId: parseInt(document.getElementById('esc-action-id').value),
+    });
+}
+
+// ── SSE ───────────────────────────────────────────────────────────────────────
+function connectSse() {
+    if (sseSource) sseSource.close();
+    const t = getToken();
+    if (!t) { alert('Login first to get JWT token'); return; }
+
+    // Append token as query param since EventSource doesn't support headers
+    sseSource = new EventSource(API + '/api/v1/sse?access_token=' + encodeURIComponent(t));
+
+    sseSource.onopen = () => {
+        setSseStatus(true);
+        addSseLog('connected', '✅ SSE stream opened');
+    };
+
+    sseSource.onerror = () => {
+        setSseStatus(false);
+        addSseLog('error', '❌ SSE connection error');
+    };
+
+    // Generic message handler
+    sseSource.onmessage = e => addSseLog('message', e.data);
+
+    // Named event handlers
+    const events = [
+        'connected','heartbeat','voice_action_created','voice_action_dispatch',
+        'voice_action_confirmed','voice_action_skipped','escalation_step1',
+        'escalation_step2','emergency_escalation','escalation_test',
+        'debug_notification','notification_update'
+    ];
+    events.forEach(evt => {
+        sseSource.addEventListener(evt, e => addSseLog(evt, e.data));
+    });
+}
+
+function disconnectSse() {
+    if (sseSource) { sseSource.close(); sseSource = null; }
+    setSseStatus(false);
+    addSseLog('disconnected', '🔌 Disconnected');
+}
+
+function setSseStatus(connected) {
+    ['sse-dot','sse-dot2'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.toggle('connected', connected); }
+    });
+    const lbl = document.getElementById('sse-label');
+    const hdr = document.getElementById('sse-status');
+    if (lbl) lbl.textContent = connected ? 'Connected' : 'Disconnected';
+    if (hdr) hdr.textContent = connected ? 'SSE connected' : 'SSE disconnected';
+}
+
+function addSseLog(type, data) {
+    const panel = document.getElementById('sse-log');
+    const d = document.createElement('div');
+    d.className = 'sse-event';
+    const t = new Date().toLocaleTimeString();
+    let pretty = data;
+    try { pretty = JSON.stringify(JSON.parse(data), null, 2); } catch {}
+    d.innerHTML = `<span style="color:var(--text-muted)">[${t}]</span> <span class="sse-type">${type}</span><pre>${pretty}</pre>`;
+    panel.prepend(d);
+}
+
+function publishSseEvent() {
+    apiCall('POST', '/debug/notifications/test', {
+        eventType: document.getElementById('sse-event-type').value,
+        message: document.getElementById('sse-message').value,
+    });
+}
+
+// ── AI ────────────────────────────────────────────────────────────────────────
+function runAIExtraction() {
+    const child = cid();
+    const msgId = document.getElementById('ai-msg-id').value;
+    apiCall('POST', '/children/' + child + '/extract-from-message', { chatMessageId: parseInt(msgId) });
+}
+
+function generateRecommendations() {
+    apiCall('POST', '/recommendations/generate', { childId: parseInt(cid()) });
+}
+
+// ── AI Test Mode ──────────────────────────────────────────────────────────────
+let _tmPollTimer = null;
+
+const SCENARIO_NAMES = [
+    'TemperatureNotReducing','HighAqi','MedicationTime','InhalerCheck','AsthmaRisk',
+    'LowHydration','RainWarning','SportsToday','PersistentCough','BreathingCheck',
+];
+const SCENARIO_LABELS = [
+    'Температура не снижается','Высокий AQI обнаружен','Пора дать лекарство',
+    'Вы дали ингалятор?','Высокий риск астмы','Ребёнок мало пил воды',
+    'Через час дождь','Сегодня физкультура','Кашель уже 2 дня','Проверьте дыхание',
+];
+
+async function startTestMode() {
+    const interval = parseInt(document.getElementById('tm-interval').value) || 5;
+    await apiCall('POST', '/debug/ai/test-mode/start', { intervalSeconds: interval });
+    _startTmPoll();
+    refreshTestModeStats();
+}
+
+async function stopTestMode() {
+    await apiCall('POST', '/debug/ai/test-mode/stop', {});
+    _stopTmPoll();
+    refreshTestModeStats();
+}
+
+function _startTmPoll() {
+    if (_tmPollTimer) return;
+    _tmPollTimer = setInterval(refreshTestModeStats, 2000);
+}
+
+function _stopTmPoll() {
+    if (_tmPollTimer) { clearInterval(_tmPollTimer); _tmPollTimer = null; }
+}
+
+async function refreshTestModeStats() {
+    const res = await fetch(`${API}/debug/ai/test-mode/status`, {
+        headers: { 'Authorization': `Bearer ${token()}` }
+    });
+    if (!res.ok) return;
+    const d = await res.json();
+    _renderTestModeStats(d);
+    if (d.isEnabled) _startTmPoll(); else _stopTmPoll();
+}
+
+function _renderTestModeStats(d) {
+    // Status bar
+    const dot   = document.getElementById('tm-dot');
+    const label = document.getElementById('tm-status-label');
+    const intLbl = document.getElementById('tm-interval-label');
+    const rateLbl = document.getElementById('tm-notif-rate');
+    if (d.isEnabled) {
+        dot.classList.add('connected');
+        label.style.color = 'var(--success)';
+        label.textContent = '🟢 AI Test Mode — ACTIVE';
+        intLbl.textContent = `every ${d.intervalSeconds}s`;
+    } else {
+        dot.classList.remove('connected');
+        label.style.color = 'var(--danger)';
+        label.textContent = '⛔ AI Test Mode — STOPPED';
+        intLbl.textContent = '';
+    }
+    rateLbl.textContent = d.notificationsPerMinute > 0
+        ? `${d.notificationsPerMinute} events/min` : '';
+
+    // Counters
+    document.getElementById('tm-c-events').textContent = d.totalEvents;
+    document.getElementById('tm-c-push').textContent   = d.totalPush;
+    document.getElementById('tm-c-sse').textContent    = d.totalSse;
+    document.getElementById('tm-c-voice').textContent  = d.totalVoice;
+    document.getElementById('tm-c-esc').textContent    = d.totalEscalations;
+    document.getElementById('tm-c-sup').textContent    = d.totalSuppressions;
+
+    // Scenarios (from recent events, extract unique)
+    const seen = new Set();
+    const scen = (d.recentEvents || []).filter(e => {
+        if (seen.has(e.scenarioIndex)) return false;
+        seen.add(e.scenarioIndex); return true;
+    }).slice(0, 5);
+    document.getElementById('tm-scenarios').innerHTML = scen.length
+        ? scen.map(e => `<div>
+            <span style="color:var(--info);font-family:monospace;">[${e.scenarioIndex}]</span>
+            <span style="color:var(--text);"> ${SCENARIO_LABELS[e.scenarioIndex] || e.scenarioName}</span>
+            ${e.hasEscalation ? '<span class="badge badge-red">🚨 ESC</span>' : ''}
+          </div>`).join('')
+        : '<div style="color:var(--text-muted);">Awaiting first cycle…</div>';
+
+    // Reasoning stream
+    const reasoning = document.getElementById('tm-reasoning');
+    reasoning.innerHTML = (d.reasoningStream || []).map(line =>
+        `<div class="log-entry" style="color:${
+            line.includes('session=') ? '#a78bfa' :
+            line.includes('decisions=') ? 'var(--success)' :
+            line.includes('followUp') ? 'var(--info)' : 'var(--text-muted)'
+        };">${escHtml(line)}</div>`
+    ).join('');
+
+    // Latest notifications (recent events)
+    const eventsEl = document.getElementById('tm-events');
+    eventsEl.innerHTML = (d.recentEvents || []).slice(0, 20).map(e =>
+        `<div class="log-entry">
+          <span class="log-time">${new Date(e.timestamp).toLocaleTimeString()}</span>
+          <span style="color:var(--warning);">[${SCENARIO_LABELS[e.scenarioIndex] || e.scenarioName}]</span>
+          exec:<span class="ok">${e.executed}</span>
+          sup:<span style="color:var(--text-muted);">${e.suppressed}</span>
+          sse:<span style="color:var(--info);">${e.sseSent}</span>
+          ${e.hasEscalation ? '<span class="badge badge-red">ESC</span>' : ''}
+          ${e.randomExtra ? `<span class="badge badge-yellow">${e.randomExtra}</span>` : ''}
+          <span style="color:var(--text-muted);font-family:monospace;font-size:0.75rem;"> fam=${e.familyId} child=${e.childId ?? '–'}</span>
+        </div>`
+    ).join('');
+
+    // Suppressions panel
+    const suppEl = document.getElementById('tm-suppressions');
+    const suppEvents = (d.recentEvents || []).filter(e => e.suppressed > 0 || e.hasEscalation);
+    suppEl.innerHTML = suppEvents.length
+        ? suppEvents.slice(0, 15).map(e =>
+            `<div class="log-entry">
+              <span class="log-time">${new Date(e.timestamp).toLocaleTimeString()}</span>
+              ${e.suppressed > 0 ? `<span class="badge badge-yellow">🚫 ${e.suppressed} suppressed</span> ` : ''}
+              ${e.hasEscalation ? '<span class="badge badge-red">🚨 escalated</span> ' : ''}
+              <span style="color:var(--text-muted);">${escHtml(e.description)}</span>
+            </div>`
+          ).join('')
+        : '<div style="color:var(--text-muted);padding:8px;">No suppressions or escalations yet</div>';
+}
+
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── SSE auth via query param support ─────────────────────────────────────────
+// Note: The SSE endpoint needs to accept access_token query param.
+// If the backend doesn't support that yet, use a middleware or accept it in the endpoint.
+</script>
+</body>
+</html>

@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareNestAI | Backend Diagnostic Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --border: #334155;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            padding-bottom: 50px;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+        }
+
+        .status-online { color: var(--success); border-color: var(--success); }
+        .status-offline { color: var(--error); border-color: var(--error); }
+
+        .config-panel {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: end;
+        }
+
+        .input-group { display: flex; flex-direction: column; gap: 8px; }
+
+        label { font-size: 0.875rem; font-weight: 500; color: var(--text-muted); }
+
+        input, select, textarea {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            width: 100%;
+        }
+
+        input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99,102,241,0.2); }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        button:hover { background: var(--primary-hover); }
+        button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        button.secondary:hover { background: var(--border); }
+        button.danger { background: var(--error); }
+
+        .grid { display: grid; grid-template-columns: 350px 1fr; gap: 20px; align-items: start; }
+
+        .panel {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 250px);
+        }
+
+        .panel.sticky { position: sticky; top: 20px; max-height: calc(100vh - 40px); }
+
+        .panel-header {
+            padding: 16px;
+            background: rgba(255,255,255,0.05);
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-content { padding: 20px; flex: 1; overflow-y: auto; }
+
+        .endpoint-list { display: flex; flex-direction: column; gap: 10px; }
+
+        .endpoint-item {
+            padding: 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .endpoint-item:hover { border-color: var(--primary); }
+        .endpoint-item.active { border-color: var(--primary); background: rgba(99,102,241,0.1); }
+
+        .method {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-right: 8px;
+            text-transform: uppercase;
+        }
+
+        .method.get { background: #3b82f6; color: white; }
+        .method.post { background: #10b981; color: white; }
+        .method.put { background: #f59e0b; color: white; }
+        .method.patch { background: #8b5cf6; color: white; }
+        .method.delete { background: #ef4444; color: white; }
+
+        .url { font-family: 'Fira Code', monospace; font-size: 0.8125rem; color: var(--text-muted); }
+
+        .response-container { display: flex; flex-direction: column; gap: 20px; }
+
+        .request-info {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .response-area {
+            background: #000;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8125rem;
+            overflow-x: auto;
+            min-height: 200px;
+            max-height: 600px;
+            white-space: pre-wrap;
+            border: 1px solid var(--border);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 2px;
+            background: var(--border);
+            padding: 2px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .tab.active { background: var(--card-bg); color: var(--text); }
+
+        .json-key { color: #818cf8; }
+        .json-string { color: #34d399; }
+        .json-number { color: #fbbf24; }
+        .json-boolean { color: #f472b6; }
+
+        .log-panel {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #000;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            border: 1px solid var(--border);
+        }
+
+        .log-entry { margin-bottom: 4px; border-bottom: 1px solid #111; padding-bottom: 4px; }
+        .log-time { color: var(--text-muted); }
+        .log-type { font-weight: 700; margin: 0 8px; }
+        .log-info { color: #3b82f6; }
+        .log-error { color: #ef4444; }
+        .log-success { color: #10b981; }
+        .log-warn { color: #f59e0b; }
+
+        .diagnostic-card {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .diagnostic-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .diagnostic-details h4 { margin-bottom: 4px; }
+        .diagnostic-details p { font-size: 0.8rem; color: var(--text-muted); }
+
+        #auth-status { font-size: 0.8rem; margin-top: 10px; color: var(--warning); }
+
+        .info-box {
+            background: rgba(99,102,241,0.1);
+            border: 1px solid rgba(99,102,241,0.3);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.8rem;
+            color: #a5b4fc;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>CareNestAI Diagnostic Terminal</h1>
+                <p style="color: var(--text-muted); font-size: 0.875rem;">Backend Integration & API Testing Suite</p>
+            </div>
+            <div id="connection-status" class="status-badge status-offline">Connecting...</div>
+        </header>
+
+        <div class="config-panel">
+            <div class="input-group">
+                <label>Backend Base URL</label>
+                <input type="text" id="base-url" placeholder="http://localhost:5204">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="checkHealth()">Check Health</button>
+                <button id="full-test-btn" style="background: linear-gradient(135deg, #6366f1, #a855f7);" onclick="runFullSystemTest()">Run Full System Test</button>
+                <button class="secondary" onclick="saveConfig()">Save Config</button>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="panel">
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('auth')">Auth</div>
+                    <div class="tab" onclick="switchTab('api')">Endpoints</div>
+                    <div class="tab" onclick="switchTab('ai')">AI Chat</div>
+                    <div class="tab" onclick="switchTab('diag')">Diagnostic</div>
+                    <div class="tab" onclick="switchTab('errors')">Errors <span id="error-count-badge" style="background:var(--error);color:white;border-radius:10px;padding:0 6px;font-size:0.7rem;display:none;">0</span></div>
+                </div>
+
+                <div id="tab-auth" class="panel-content">
+                    <div class="endpoint-list">
+                        <h3>Registration</h3>
+                        <div class="info-box">Body: <b>email</b>, <b>password</b>, <b>displayName</b></div>
+                        <div class="input-group" style="margin-top:10px">
+                            <input type="text" id="reg-email" placeholder="Email (default: testparent@carenestai.local)">
+                            <input type="password" id="reg-password" placeholder="Password (default: Password123!)">
+                            <input type="text" id="reg-displayname" placeholder="Display Name (default: Test Parent)">
+                            <button onclick="testRegister()">Register New User</button>
+                        </div>
+
+                        <hr style="margin:20px 0;border:0;border-top:1px solid var(--border);">
+
+                        <h3>Login</h3>
+                        <div id="auth-status">Not Authenticated</div>
+
+                        <hr style="margin:20px 0;border:0;border-top:1px solid var(--border);">
+
+                        <h3>Quick Actions</h3>
+                        <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px;">Use email/password fields above, or leave blank to use defaults (<b>testparent@carenestai.local</b> / <b>Password123!</b>).</p>
+                        <div style="display:flex;flex-direction:column;gap:8px;">
+                            <button style="width:100%;background:#7c3aed;font-weight:bold;" onclick="quickLoginTestAccount()">⚡ Login as Test Account (testparent)</button>
+                            <button style="width:100%;background:var(--success)" onclick="testLogin()">Login (use fields above)</button>
+                            <button class="secondary" style="width:100%" onclick="createDefaultFamily()">Create My First Family</button>
+                            <button class="danger" style="width:100%;padding:4px;font-size:0.7rem;" onclick="resetApp()">Reset Tool & Logout</button>
+                        </div>
+                        <div id="family-id-display" style="display:none;margin-top:10px;font-size:0.8rem;color:var(--success)"></div>
+                    </div>
+                </div>
+
+                <div id="tab-api" class="panel-content" style="display:none">
+                    <div class="endpoint-list" id="api-list"></div>
+                </div>
+
+                <div id="tab-ai" class="panel-content" style="display:none">
+                    <h3 style="margin-bottom:10px">AI Chat Test</h3>
+                    <div class="info-box" id="ai-status-info">Login and create a family first, then create a chat below.</div>
+
+                    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+                        <div style="display:flex;gap:8px;">
+                            <input type="number" id="ai-chat-id" placeholder="Chat ID (auto-fill below)" style="flex:1">
+                            <button style="flex:0;padding:6px 14px;font-size:0.8rem;" onclick="createAiChat()">New Chat</button>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <select id="ai-locale" style="width:80px">
+                                <option value="en">EN</option>
+                                <option value="ru">RU</option>
+                                <option value="uz">UZ</option>
+                            </select>
+                            <input type="text" id="ai-message" placeholder="Ask anything about your family..." style="flex:1" onkeydown="if(event.key==='Enter')sendAiMessage()">
+                            <button style="flex:0;padding:6px 14px;font-size:0.8rem;" onclick="sendAiMessage()">Send</button>
+                        </div>
+                    </div>
+
+                    <div id="ai-chat-log" style="background:#000;border-radius:8px;padding:10px;min-height:200px;max-height:350px;overflow-y:auto;font-size:0.85rem;font-family:'Fira Code',monospace;">
+                        <div style="color:var(--text-muted)">Chat messages will appear here...</div>
+                    </div>
+
+                    <div style="margin-top:12px;padding:10px;background:var(--bg);border-radius:8px;border:1px solid var(--border);">
+                        <h4 style="margin-bottom:8px;font-size:0.85rem;">TTS (Text To Speech)</h4>
+                        <div style="display:flex;flex-direction:column;gap:6px;">
+                            <div style="display:flex;gap:8px;">
+                                <select id="tts-lang" style="width:80px">
+                                    <option value="en">EN</option>
+                                    <option value="ru">RU</option>
+                                    <option value="uz">UZ</option>
+                                </select>
+                                <textarea id="tts-text" placeholder="Type text to speak..." style="flex:1;height:50px;font-size:0.8rem;resize:none;"></textarea>
+                            </div>
+                            <div style="display:flex;gap:8px;">
+                                <button style="flex:1;background:var(--success);font-size:0.8rem;" onclick="speakBrowser()">🔊 Browser TTS (Web Speech API)</button>
+                                <button style="flex:1;background:#6366f1;font-size:0.8rem;" onclick="speakBackend()">🎵 Backend TTS (MP3)</button>
+                                <button class="secondary" style="flex:0;padding:6px;font-size:0.8rem;" onclick="stopSpeech()" title="Stop">■</button>
+                            </div>
+                            <div id="tts-status" style="font-size:0.75rem;color:var(--text-muted);min-height:18px;"></div>
+                            <audio id="tts-audio" controls style="width:100%;display:none;margin-top:4px;"></audio>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        <h4 style="margin-bottom:8px;font-size:0.85rem;">Quick AI Tests</h4>
+                        <div style="display:flex;flex-direction:column;gap:4px;">
+                            <button class="secondary" style="font-size:0.75rem;text-align:left;padding:6px 10px;" onclick="quickAiTest('Hello, who are you?', 'en')">EN: Hello, who are you?</button>
+                            <button class="secondary" style="font-size:0.75rem;text-align:left;padding:6px 10px;" onclick="quickAiTest('Tell me about my children and their allergies', 'en')">EN: Tell me about my children and their allergies</button>
+                            <button class="secondary" style="font-size:0.75rem;text-align:left;padding:6px 10px;" onclick="quickAiTest('What should I pack for my child today given weather?', 'en')">EN: Weather recommendation</button>
+                            <button class="secondary" style="font-size:0.75rem;text-align:left;padding:6px 10px;" onclick="quickAiTest('Привет, расскажи про моих детей', 'ru')">RU: Привет, расскажи про моих детей</button>
+                            <button class="secondary" style="font-size:0.75rem;text-align:left;padding:6px 10px;" onclick="quickAiTest('Add a nap routine for my child at 2pm', 'en')">EN: Add routine (AI proposal test)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-diag" class="panel-content" style="display:none">
+                    <div class="diagnostic-card">
+                        <div class="diagnostic-icon" style="background:rgba(16,185,129,0.2);color:var(--success);">H</div>
+                        <div class="diagnostic-details">
+                            <h4>Health Check</h4>
+                            <p id="diag-health">Pending...</p>
+                        </div>
+                    </div>
+                    <div class="diagnostic-card">
+                        <div class="diagnostic-icon" style="background:rgba(59,130,246,0.2);color:#3b82f6;">C</div>
+                        <div class="diagnostic-details">
+                            <h4>CORS Policy</h4>
+                            <p id="diag-cors">Pending...</p>
+                        </div>
+                    </div>
+                    <div class="diagnostic-card">
+                        <div class="diagnostic-icon" style="background:rgba(245,158,11,0.2);color:var(--warning);">D</div>
+                        <div class="diagnostic-details">
+                            <h4>Database Connectivity</h4>
+                            <p id="diag-db">Pending...</p>
+                        </div>
+                    </div>
+                    <button style="width:100%;margin-top:10px" onclick="runFullDiagnostic()">Run Full Diagnostics</button>
+                </div>
+
+                <div id="tab-errors" class="panel-content" style="display:none">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                        <h3 style="margin:0">Error History</h3>
+                        <button class="secondary" style="padding:4px 10px;font-size:0.75rem;" onclick="clearErrorHistory()">Clear History</button>
+                    </div>
+                    <div class="endpoint-list" id="error-list">
+                        <p style="color:var(--text-muted);font-size:0.875rem;">No errors recorded.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel sticky">
+                <div class="panel-header">
+                    <span id="request-title">Request Explorer</span>
+                    <div style="display:flex;gap:10px;">
+                        <button class="secondary" style="padding:4px 10px;font-size:0.75rem;" onclick="clearLogs()">Clear Logs</button>
+                        <button style="padding:4px 10px;font-size:0.75rem;" id="execute-btn" onclick="executeCurrent()">Execute</button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <div class="response-container">
+                        <div class="request-info">
+                            <div style="display:flex;gap:10px;margin-bottom:15px;">
+                                <select id="request-method" style="width:100px;">
+                                    <option value="GET">GET</option>
+                                    <option value="POST">POST</option>
+                                    <option value="PUT">PUT</option>
+                                    <option value="PATCH">PATCH</option>
+                                    <option value="DELETE">DELETE</option>
+                                </select>
+                                <input type="text" id="request-url" placeholder="/auth/login">
+                            </div>
+                            <label>Request Body (JSON)</label>
+                            <textarea id="request-body" style="height:120px;font-family:'Fira Code',monospace;margin-top:5px;" placeholder="{}"></textarea>
+                        </div>
+
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <label>Response</label>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <span id="response-status" style="font-size:0.75rem;font-weight:700;"></span>
+                                <button class="secondary" id="tts-btn" style="padding:4px 10px;font-size:0.75rem;display:none;" onclick="readResponseAloud()">🔊 Read Aloud</button>
+                            </div>
+                        </div>
+                        <div class="response-area" id="response-output">Response will appear here...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="log-panel" id="log-entries">
+            <div class="log-entry"><span class="log-time">[init]</span><span class="log-type log-info">INFO</span>CareNestAI diagnostic tool loaded.</div>
+        </div>
+    </div>
+
+    <script>
+        let currentToken = localStorage.getItem('token') || null;
+        let refreshToken = localStorage.getItem('refresh_token') || null;
+        let currentFamilyId = parseInt(localStorage.getItem('family_id') || '0') || null;
+        let currentChildId = parseInt(localStorage.getItem('child_id') || '0') || null;
+        let currentChatId = parseInt(localStorage.getItem('ai_chat_id') || '0') || null;
+        let baseUrl = localStorage.getItem('base_url') || (window.location.origin !== 'null' ? window.location.origin : 'http://localhost:5204');
+        let errorHistory = JSON.parse(localStorage.getItem('error_history') || '[]');
+
+        // ── Endpoint catalog — only real implemented endpoints ─────────────────────────
+        const endpointCatalog = [
+            // Health
+            { group: 'Health', method: 'GET', url: '/health', note: 'Full health — 503 if Redis down (expected in dev)' },
+            { group: 'Health', method: 'GET', url: '/alive', note: 'Liveness — always 200 when app is running' },
+            { group: 'Health', method: 'GET', url: '/ready', note: 'Readiness — checks DB connectivity' },
+
+            // TTS → /tts/*
+            { group: 'TTS', method: 'GET', url: '/tts/synthesize?text=Hello%2C%20I%20am%20CareNestAI.&lang=en', note: 'Returns MP3 audio. Open in browser or use Read Aloud button.' },
+            { group: 'TTS', method: 'GET', url: '/tts/synthesize?text=%D0%9F%D1%80%D0%B8%D0%B2%D0%B5%D1%82%2C%20%D1%8F%20%D0%B2%D0%B0%D1%88%20%D0%BF%D0%BE%D0%BC%D0%BE%D1%89%D0%BD%D0%B8%D0%BA.&lang=ru', note: 'Russian TTS test' },
+
+            // Auth  →  /auth/*
+            { group: 'Auth', method: 'POST', url: '/auth/register',
+              body: { email: 'parent@example.com', password: 'Password123!', displayName: 'Demo Parent', deviceId: null } },
+            { group: 'Auth', method: 'POST', url: '/auth/login',
+              body: { email: 'testparent@carenestai.local', password: 'Password123!', deviceId: null } },
+            { group: 'Auth', method: 'POST', url: '/auth/refresh',
+              body: { refreshToken: '{{refreshToken}}' } },
+            { group: 'Auth', method: 'POST', url: '/auth/logout',
+              body: { refreshToken: '{{refreshToken}}' } },
+
+            // Families  →  /families/*  (IDs are integers)
+            { group: 'Families', method: 'GET', url: '/families/mine' },
+            { group: 'Families', method: 'POST', url: '/families',
+              body: { name: 'Debug Family', locationKey: 'Tashkent', latitude: 41.2995, longitude: 69.2401 } },
+            { group: 'Families', method: 'POST', url: '/families/{{familyId}}/members',
+              body: { userId: 'user-id-here', role: 'Parent' },
+              note: 'role: Parent|Caregiver|Viewer' },
+            { group: 'Families', method: 'POST', url: '/families/{{familyId}}/invitation/accept' },
+            { group: 'Families', method: 'PUT', url: '/families/{{familyId}}/members/user-id/role',
+              body: { role: 'Caregiver' },
+              note: 'Replace user-id with real userId' },
+            { group: 'Families', method: 'DELETE', url: '/families/{{familyId}}/members/user-id',
+              note: 'Replace user-id with real userId' },
+
+            // Children  →  /children/*
+            { group: 'Children', method: 'POST', url: '/children',
+              body: { familyId: '{{familyId}}', displayName: 'Adam', ageYears: 7 } },
+            { group: 'Children', method: 'GET', url: '/children/1', note: 'Replace 1 with childId' },
+            { group: 'Children', method: 'GET', url: '/children/by-family/{{familyId}}' },
+            { group: 'Children', method: 'PUT', url: '/children/1',
+              body: { displayName: 'Adam Updated', ageYears: 8 },
+              note: 'Replace 1 with childId' },
+            { group: 'Children', method: 'PUT', url: '/children/1/sensitivity',
+              body: { heatSensitive: false, coldSensitive: true, airQualitySensitive: true, pollenSensitive: true, uvSensitive: false, skinSensitive: false, activitySensitive: false, respiratorySensitive: false },
+              note: 'Replace 1 with childId' },
+            { group: 'Children', method: 'POST', url: '/children/1/notes',
+              body: { noteType: 'Observation', note: 'Gets tired after school', source: 'Text', tags: null, confidenceScore: 1.0, needsConfirmation: false },
+              note: 'noteType: Health|Hydration|Routine|Clothing|Observation|Preference|Reminder  source: Voice|Text|Ai  Replace 1 with childId' },
+            { group: 'Children', method: 'POST', url: '/children/1/routines',
+              body: { title: 'Morning Walk', routineType: 'Outdoor', startTime: '08:00:00', endTime: '08:30:00', repeatPattern: 'Daily', locationType: 'Outdoor', activityIntensity: 'Low', weatherSensitive: true },
+              note: 'Replace 1 with childId' },
+            { group: 'Children', method: 'POST', url: '/children/notes/1/confirm',
+              note: 'Replace 1 with noteId' },
+            { group: 'Children', method: 'POST', url: '/children/1/extract-from-message',
+              body: { chatMessageId: 1 },
+              note: 'Replace 1 with childId' },
+
+            // Calendar  →  /calendar/*
+            { group: 'Calendar', method: 'POST', url: '/calendar/families/{{familyId}}/events',
+              body: { childId: 1, title: 'School Pickup', description: 'Pick up from school', startDatetime: new Date(Date.now() + 3600000).toISOString(), endDatetime: new Date(Date.now() + 7200000).toISOString(), locationLabel: 'School', locationKey: 'Tashkent', latitude: 41.2995, longitude: 69.2401, locationType: 'Outdoor', activityIntensity: 'Low', weatherSensitive: true } },
+            { group: 'Calendar', method: 'GET', url: '/calendar/families/{{familyId}}/events?from={{now}}&to={{week}}' },
+            { group: 'Calendar', method: 'GET', url: '/calendar/events/1', note: 'Replace 1 with eventId' },
+            { group: 'Calendar', method: 'PUT', url: '/calendar/events/1',
+              body: { title: 'Updated Event', startDatetime: new Date(Date.now()+3600000).toISOString(), endDatetime: new Date(Date.now()+7200000).toISOString(), locationLabel: null, locationKey: null, latitude: null, longitude: null, locationType: 'Indoor', activityIntensity: 'Low', weatherSensitive: false },
+              note: 'Replace 1 with eventId' },
+            { group: 'Calendar', method: 'DELETE', url: '/calendar/events/1', note: 'Replace 1 with eventId' },
+
+            // Chats / AI  →  /chats/*
+            { group: 'Chats / AI', method: 'POST', url: '/chats',
+              body: { familyId: '{{familyId}}', chatType: 'Family', title: 'Family Assistant' },
+              note: 'chatType: Family | Private | Child' },
+            { group: 'Chats / AI', method: 'POST', url: '/chats/{{chatId}}/messages',
+              body: { content: 'My child had a cough last night. What should I do?', inputMode: 'Text', locale: 'en' },
+              note: 'Replace {{chatId}} with chat ID from AI tab' },
+            { group: 'Chats / AI', method: 'GET', url: '/chats/{{chatId}}/messages?limit=50', note: 'Replace {{chatId}} with chat ID' },
+            { group: 'Chats / AI', method: 'POST', url: '/chats/{{chatId}}/messages/1/confirm',
+              body: { edits: null },
+              note: 'Replace {{chatId}} and message ID' },
+
+            // Weather  →  /weather/*
+            { group: 'Weather', method: 'GET', url: '/weather/current?locationKey=Tashkent&latitude=41.2995&longitude=69.2401',
+              note: 'Returns temp, AQI, pollen, UV, condition. Cache: 60s Redis → 30min DB → live.' },
+
+            // Recommendations  →  /recommendations/*
+            { group: 'Recommendations', method: 'POST', url: '/recommendations/generate/1',
+              note: 'Run recommendation engine for childId=1 (Amir). Uses weather + sensitivity + routines.' },
+            { group: 'Recommendations', method: 'POST', url: '/recommendations/1/feedback',
+              body: { feedbackType: 'Useful' },
+              note: 'feedbackType: Useful|NotUseful|TooFrequent|WrongTiming. Replace 1 with recommendationId.' },
+
+            // User Settings  →  /users/*
+            { group: 'User Settings', method: 'GET', url: '/users/me/settings' },
+            { group: 'User Settings', method: 'PUT', url: '/users/me/settings',
+              body: { preferredInputMode: 'Text', preferredOutputMode: 'Text', voiceEnabled: false, notificationLevel: 'Normal', proactiveMode: 'Active', quietHoursStart: null, quietHoursEnd: null, preferredLanguage: 'en', timezone: 'Asia/Tashkent' } },
+        ];
+
+        // ── Init ────────────────────────────────────────────────────────────────────
+        document.getElementById('base-url').value = baseUrl;
+        updateAuthDisplay();
+        renderEndpointCatalog();
+
+        window.addEventListener('load', () => {
+            log('Diagnostic tool ready. Checking backend health...');
+            checkHealth();
+            renderErrorHistory();
+        });
+
+        // ── Logging ─────────────────────────────────────────────────────────────────
+        function log(message, type = 'info') {
+            const container = document.getElementById('log-entries');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const now = new Date();
+            const time = `[${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}]`;
+            entry.innerHTML = `<span class="log-time">${time}</span><span class="log-type log-${type}">${type.toUpperCase()}</span>${message}`;
+            container.prepend(entry);
+        }
+
+        function pad(n) { return String(n).padStart(2, '0'); }
+
+        function clearLogs() { document.getElementById('log-entries').innerHTML = ''; }
+
+        // ── Tab switching ────────────────────────────────────────────────────────────
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            ['auth','api','ai','diag','errors'].forEach(id => {
+                document.getElementById(`tab-${id}`).style.display = 'none';
+            });
+            const tabEl = Array.from(document.querySelectorAll('.tab')).find(el => el.getAttribute('onclick').includes(`'${tab}'`));
+            if (tabEl) tabEl.classList.add('active');
+            document.getElementById(`tab-${tab}`).style.display = 'block';
+        }
+
+        // ── Config ───────────────────────────────────────────────────────────────────
+        function saveConfig() {
+            baseUrl = document.getElementById('base-url').value.replace(/\/$/, '');
+            localStorage.setItem('base_url', baseUrl);
+            log(`Config saved. Base URL: ${baseUrl}`, 'success');
+            checkHealth();
+        }
+
+        // ── HTTP helper ──────────────────────────────────────────────────────────────
+        async function api(method, path, body = null) {
+            const url = path.startsWith('http') ? path : `${baseUrl}${path}`;
+            const options = {
+                method,
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+            };
+
+            if (currentToken) options.headers['Authorization'] = `Bearer ${currentToken}`;
+
+            if (body && method !== 'GET') {
+                if (body instanceof FormData) {
+                    delete options.headers['Content-Type'];
+                    options.body = body;
+                } else {
+                    options.body = typeof body === 'string' ? body : JSON.stringify(body);
+                }
+            }
+
+            log(`Sending ${method} → ${path}`);
+
+            try {
+                const response = await fetch(url, options);
+                const status = response.status;
+
+                document.getElementById('response-status').innerText = `HTTP ${status} ${response.statusText}`;
+                document.getElementById('response-status').style.color = status < 300 ? 'var(--success)' : 'var(--error)';
+
+                const contentType = response.headers.get('content-type');
+                let data;
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    data = await response.text();
+                }
+
+                displayResponse(data);
+                log(`Response: ${status} ${response.statusText}`, status < 300 ? 'success' : 'error');
+
+                if (status >= 400) recordError(method, path, status, data);
+
+                return { status, data };
+            } catch (err) {
+                log(`Network error: ${err.message}`, 'error');
+                displayResponse({ error: 'Network Error', message: err.message });
+                recordError(method, path, 'Network Error', err.message);
+                return { status: 0, error: err };
+            }
+        }
+
+        // ── Error tracking ───────────────────────────────────────────────────────────
+        function recordError(method, url, status, response) {
+            const error = { timestamp: new Date().toISOString(), method, url, status,
+                response: typeof response === 'string' ? response : JSON.stringify(response, null, 2) };
+            errorHistory.unshift(error);
+            if (errorHistory.length > 50) errorHistory.pop();
+            localStorage.setItem('error_history', JSON.stringify(errorHistory));
+            renderErrorHistory();
+        }
+
+        function renderErrorHistory() {
+            const container = document.getElementById('error-list');
+            const badge = document.getElementById('error-count-badge');
+            if (errorHistory.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-muted);font-size:0.875rem;">No errors recorded.</p>';
+                badge.style.display = 'none';
+                return;
+            }
+            badge.innerText = errorHistory.length;
+            badge.style.display = 'inline-block';
+            container.innerHTML = errorHistory.map((err, idx) => {
+                const time = new Date(err.timestamp).toLocaleTimeString();
+                const statusColor = typeof err.status === 'number'
+                    ? (err.status >= 500 ? 'var(--error)' : 'var(--warning)') : 'var(--error)';
+                return `
+                    <div class="endpoint-item" onclick="loadErrorDetails(${idx})">
+                        <div style="display:flex;justify-content:space-between;align-items:start;">
+                            <span class="method ${err.method.toLowerCase()}">${err.method}</span>
+                            <span style="font-size:0.7rem;color:${statusColor};font-weight:bold;">${err.status}</span>
+                        </div>
+                        <div class="url" style="margin-top:5px;word-break:break-all;">${err.url}</div>
+                        <div style="font-size:0.65rem;color:var(--text-muted);margin-top:4px;">${time}</div>
+                    </div>`;
+            }).join('');
+        }
+
+        function loadErrorDetails(index) {
+            const err = errorHistory[index];
+            document.getElementById('request-method').value = err.method;
+            document.getElementById('request-url').value = err.url;
+            document.getElementById('request-title').innerText = `Error: ${err.method} ${err.url}`;
+            document.getElementById('response-status').innerText = `HTTP ${err.status}`;
+            document.getElementById('response-status').style.color = 'var(--error)';
+            try { displayResponse(JSON.parse(err.response)); } catch { displayResponse(err.response); }
+        }
+
+        function clearErrorHistory() {
+            if (confirm('Clear all errors?')) {
+                errorHistory = [];
+                localStorage.setItem('error_history', '[]');
+                renderErrorHistory();
+            }
+        }
+
+        function resetApp() {
+            if (confirm('Log out and clear all saved settings?')) {
+                localStorage.clear();
+                window.location.reload();
+            }
+        }
+
+        // ── Display ──────────────────────────────────────────────────────────────────
+        function displayResponse(data) {
+            const output = document.getElementById('response-output');
+            if (typeof data === 'string') {
+                output.innerText = data;
+            } else {
+                output.innerHTML = syntaxHighlight(data);
+            }
+            // Show Read Aloud button if response contains AI text
+            const hasAiText = data && (data.aiResponse || data.content || data.reply);
+            document.getElementById('tts-btn').style.display = hasAiText ? 'inline-block' : 'none';
+        }
+
+        function syntaxHighlight(json) {
+            if (typeof json !== 'string') json = JSON.stringify(json, undefined, 2);
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, match => {
+                let cls = 'json-number';
+                if (/^"/.test(match)) { cls = /:$/.test(match) ? 'json-key' : 'json-string'; }
+                else if (/true|false/.test(match)) { cls = 'json-boolean'; }
+                return `<span class="${cls}">${match}</span>`;
+            });
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // ── Endpoint catalog renderer ────────────────────────────────────────────────
+        function renderEndpointCatalog() {
+            const container = document.getElementById('api-list');
+            const groups = endpointCatalog.reduce((acc, ep) => {
+                acc[ep.group] = acc[ep.group] || [];
+                acc[ep.group].push(ep);
+                return acc;
+            }, {});
+
+            container.innerHTML = Object.entries(groups).map(([group, endpoints]) => `
+                <h3 style="margin:14px 0 8px">${escapeHtml(group)} <span style="font-size:.7rem;color:var(--text-muted)">(${endpoints.length})</span></h3>
+                ${endpoints.map(ep => {
+                    const body = ep.body === undefined ? null : ep.body;
+                    return `
+                        <div class="endpoint-item" onclick='selectEndpoint(${JSON.stringify(ep.method)},${JSON.stringify(ep.url)},${JSON.stringify(body)})' title="${escapeHtml(ep.note||'')}">
+                            <span class="method ${ep.method.toLowerCase()}">${ep.method}</span>
+                            <span class="url">${escapeHtml(ep.url)}</span>
+                            ${ep.note ? `<div style="margin-top:4px;font-size:.7rem;color:var(--warning)">${escapeHtml(ep.note)}</div>` : ''}
+                        </div>`;
+                }).join('')}
+            `).join('');
+
+            log(`Catalog loaded: ${endpointCatalog.length} endpoints.`, 'success');
+        }
+
+        function resolveTemplates(value) {
+            if (typeof value !== 'string') return value;
+            return value
+                .replace(/\{\{familyId\}\}/g, currentFamilyId || '1')
+                .replace(/\{\{chatId\}\}/g, currentChatId || '1')
+                .replace(/\{\{refreshToken\}\}/g, refreshToken || '')
+                .replace(/\{\{now\}\}/g, new Date().toISOString())
+                .replace(/\{\{week\}\}/g, new Date(Date.now() + 86400000 * 7).toISOString());
+        }
+
+        function selectEndpoint(method, url, body = null) {
+            const resolvedUrl = resolveTemplates(url);
+            const resolvedBody = body ? JSON.parse(JSON.stringify(body), (key, value) => {
+                if (typeof value === 'string') return resolveTemplates(value);
+                return value;
+            }) : {};
+
+            document.getElementById('request-method').value = method;
+            document.getElementById('request-url').value = resolvedUrl;
+            document.getElementById('request-body').value = ['GET','DELETE'].includes(method) && Object.keys(resolvedBody).length === 0
+                ? '' : JSON.stringify(resolvedBody, null, 2);
+            document.getElementById('request-title').innerText = `Request: ${method} ${resolvedUrl}`;
+        }
+
+        async function executeCurrent() {
+            const method = document.getElementById('request-method').value;
+            const url = document.getElementById('request-url').value;
+            const bodyStr = document.getElementById('request-body').value.trim();
+
+            let body = null;
+            if (bodyStr && bodyStr !== '{}') {
+                try { body = JSON.parse(bodyStr); } catch (e) {
+                    log('Invalid JSON in request body', 'error');
+                    return;
+                }
+            }
+
+            await api(method, url, body);
+        }
+
+        // ── Health Check ─────────────────────────────────────────────────────────────
+        async function checkHealth() {
+            const res = await api('GET', '/alive');
+            const statusEl = document.getElementById('connection-status');
+            if (res.status === 200) {
+                statusEl.innerText = 'Online';
+                statusEl.className = 'status-badge status-online';
+                log('Backend is alive.', 'success');
+            } else {
+                statusEl.innerText = 'Offline';
+                statusEl.className = 'status-badge status-offline';
+                log('Backend unreachable. Is the server running?', 'error');
+            }
+        }
+
+        // ── Auth actions ─────────────────────────────────────────────────────────────
+        async function testRegister() {
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const displayName = document.getElementById('reg-displayname').value || null;
+
+            if (!email || !password) { log('Email and password are required.', 'error'); return; }
+
+            const res = await api('POST', '/auth/register', { email, password, displayName, deviceId: null });
+            if (res.status === 201) {
+                log('Registration successful! Logging in...', 'success');
+                handleAuthResponse(res.data);
+            } else if (res.status === 409) {
+                log(`Email already registered. Try logging in instead.`, 'warn');
+            } else {
+                log(`Registration failed (${res.status}): ${JSON.stringify(res.data)}`, 'error');
+            }
+        }
+
+        async function testLogin() {
+            const email = document.getElementById('reg-email').value || 'testparent@carenestai.local';
+            const password = document.getElementById('reg-password').value || 'Password123!';
+
+            const res = await api('POST', '/auth/login', { email, password, deviceId: null });
+            if (res.status === 200) {
+                log('Login successful!', 'success');
+                handleAuthResponse(res.data);
+            } else {
+                log(`Login failed: ${JSON.stringify(res.data)}`, 'error');
+            }
+        }
+
+        async function quickLoginTestAccount() {
+            // Clears any old session and logs in with the known test family account
+            localStorage.removeItem('token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('family_id');
+            localStorage.removeItem('ai_chat_id');
+            currentToken = null; refreshToken = null; currentFamilyId = null; currentChatId = null;
+            const res = await api('POST', '/auth/login', { email: 'testparent@carenestai.local', password: 'Password123!', deviceId: null });
+            if (res.status === 200) {
+                log('Logged in as test account!', 'success');
+                await handleAuthResponse(res.data);
+            } else {
+                log(`Login failed: ${JSON.stringify(res.data)}`, 'error');
+            }
+        }
+
+        async function handleAuthResponse(data) {
+            currentToken = data.accessToken;
+            refreshToken = data.refreshToken;
+            localStorage.setItem('token', currentToken);
+            localStorage.setItem('refresh_token', refreshToken);
+
+            // Always clear stale chat IDs on any login — the new session owns different data
+            aiChatId = null;
+            currentChatId = null;
+            localStorage.removeItem('ai_chat_id');
+            const chatInput = document.getElementById('ai-chat-id');
+            if (chatInput) chatInput.value = '';
+            const aiInfo = document.getElementById('ai-status-info');
+            if (aiInfo) aiInfo.innerText = 'Login and create a family first, then create a chat below.';
+
+            updateAuthDisplay();
+            // Auto-fetch family so {{familyId}} resolves immediately
+            const famRes = await api('GET', '/families/mine');
+            if (famRes.status === 200 && famRes.data?.id) {
+                currentFamilyId = famRes.data.id;
+                localStorage.setItem('family_id', currentFamilyId);
+                log(`Family auto-detected: ID=${currentFamilyId} (${famRes.data.name || ''})`, 'success');
+            } else {
+                log('No family found — click "Create My First Family" to create one.', 'warn');
+            }
+            updateAuthDisplay();
+        }
+
+        async function createDefaultFamily() {
+            if (!currentToken) { log('Login first.', 'error'); return; }
+            const res = await api('POST', '/families', { name: 'My Family', locationKey: 'Tashkent', latitude: 41.2995, longitude: 69.2401 });
+            if (res.status === 201) {
+                currentFamilyId = res.data.id;
+                localStorage.setItem('family_id', currentFamilyId);
+                const el = document.getElementById('family-id-display');
+                el.innerText = `Family created! ID = ${currentFamilyId}`;
+                el.style.display = 'block';
+                log(`Family created! ID = ${currentFamilyId}`, 'success');
+            } else {
+                log(`Family creation failed: ${JSON.stringify(res.data)}`, 'error');
+            }
+        }
+
+        function updateAuthDisplay() {
+            const el = document.getElementById('auth-status');
+            if (currentToken) {
+                el.innerText = `Authenticated (token active)${currentFamilyId ? ' · Family ID: ' + currentFamilyId : ''}`;
+                el.style.color = 'var(--success)';
+            } else {
+                el.innerText = 'Not Authenticated';
+                el.style.color = 'var(--warning)';
+            }
+        }
+
+        // ── Diagnostics ──────────────────────────────────────────────────────────────
+        async function runFullDiagnostic() {
+            log('Starting full diagnostics...');
+
+            const diagHealth = document.getElementById('diag-health');
+            diagHealth.innerText = 'Checking...';
+            const healthRes = await api('GET', '/alive');
+            diagHealth.innerText = healthRes.status === 200 ? 'Online (Alive)' : 'Unhealthy / Offline';
+            diagHealth.style.color = healthRes.status === 200 ? 'var(--success)' : 'var(--error)';
+
+            const diagCors = document.getElementById('diag-cors');
+            diagCors.innerText = 'Checking...';
+            try {
+                await fetch(`${baseUrl}/health`, { method: 'OPTIONS' });
+                diagCors.innerText = 'Active (requests allowed)';
+                diagCors.style.color = 'var(--success)';
+            } catch {
+                diagCors.innerText = 'Blocked or Network Error';
+                diagCors.style.color = 'var(--error)';
+            }
+
+            const diagDb = document.getElementById('diag-db');
+            diagDb.innerText = 'Checking...';
+            const dbRes = await api('GET', '/ready');
+            const dbOk = dbRes.status === 200;
+            diagDb.innerText = dbOk ? 'Connected (PostgreSQL)' : 'Connection Failed';
+            diagDb.style.color = dbOk ? 'var(--success)' : 'var(--error)';
+
+            log('Diagnostics complete.', 'success');
+        }
+
+        // ── Full System Test ─────────────────────────────────────────────────────────
+        async function runFullSystemTest() {
+            const btn = document.getElementById('full-test-btn');
+            btn.disabled = true;
+            const orig = btn.innerText;
+            btn.innerText = 'Testing...';
+
+            log('=== STARTING FULL SYSTEM TEST ===', 'info');
+
+            try {
+                // 1. Register unique user
+                const testId = Math.random().toString(36).substring(7);
+                const email = `test_${testId}@example.com`;
+                const password = 'Password123!';
+
+                log(`Step 1: Register ${email}...`);
+                const regRes = await api('POST', '/auth/register', {
+                    email, password, displayName: `Test ${testId}`, deviceId: null
+                });
+                if (regRes.status !== 201) throw new Error(`Register failed: ${JSON.stringify(regRes.data)}`);
+                await handleAuthResponse(regRes.data);
+                log('✅ Register OK', 'success');
+
+                // 2. Create Family
+                log('Step 2: Create family...');
+                const famRes = await api('POST', '/families', {
+                    name: 'Automated Family', locationKey: 'Tashkent', latitude: 41.2995, longitude: 69.2401
+                });
+                if (famRes.status !== 201) throw new Error(`Family failed: ${JSON.stringify(famRes.data)}`);
+                const familyId = famRes.data.id;
+                currentFamilyId = familyId;
+                localStorage.setItem('family_id', familyId);
+                log(`✅ Family created (ID=${familyId})`, 'success');
+
+                // 3. Create Child
+                log('Step 3: Create child...');
+                const childRes = await api('POST', '/children', {
+                    familyId, displayName: 'Junior', ageYears: 6
+                });
+                if (childRes.status !== 201) throw new Error(`Child failed: ${JSON.stringify(childRes.data)}`);
+                const childId = childRes.data.id;
+                currentChildId = childId;
+                localStorage.setItem('child_id', childId);
+                log(`✅ Child created (ID=${childId})`, 'success');
+
+                // 4. Add Child Routine
+                log('Step 4: Add child routine...');
+                const routineRes = await api('POST', `/children/${childId}/routines`, {
+                    title: 'Morning Walk', routineType: 'Outdoor', startTime: '08:00:00',
+                    endTime: '08:30:00', repeatPattern: 'Daily', locationType: 'Outdoor',
+                    activityIntensity: 'Low', weatherSensitive: true
+                });
+                if (routineRes.status !== 201) log('⚠️ Routine creation failed', 'warning');
+                else log('✅ Routine created', 'success');
+
+                // 5. Create Calendar Event
+                log('Step 5: Create calendar event...');
+                const now = new Date();
+                const evtRes = await api('POST', `/calendar/families/${familyId}/events`, {
+                    childId, title: 'School Pickup',
+                    startDatetime: new Date(now.getTime() + 3600000).toISOString(),
+                    endDatetime: new Date(now.getTime() + 7200000).toISOString(),
+                    locationLabel: 'School', locationKey: 'Tashkent',
+                    latitude: 41.2995, longitude: 69.2401,
+                    locationType: 'Outdoor', activityIntensity: 'Low', weatherSensitive: true
+                });
+                if (evtRes.status !== 201) log('⚠️ Calendar event failed', 'warning');
+                else log('✅ Calendar event created', 'success');
+
+                // 6. Weather
+                log('Step 6: Fetch weather (Tashkent)...');
+                const wxRes = await api('GET', '/weather/current?locationKey=Tashkent&latitude=41.2995&longitude=69.2401');
+                if (wxRes.status !== 200) log('⚠️ Weather failed (check network / provider)', 'warning');
+                else log('✅ Weather OK', 'success');
+
+                // 7. AI Chat
+                log('Step 7: Create chat and send message...');
+                const chatRes = await api('POST', '/chats', { familyId, chatType: 'Family', title: 'Test Chat' });
+                if (chatRes.status !== 201) {
+                    log('⚠️ Chat creation failed', 'warning');
+                } else {
+                    const chatId = chatRes.data.id;
+                    const msgRes = await api('POST', `/chats/${chatId}/messages`, {
+                        content: 'What should I pack for my child today given the weather?',
+                        inputMode: 'Text', locale: 'en'
+                    });
+                    if (msgRes.status !== 200) log('⚠️ Chat message failed (check LLM config)', 'warning');
+                    else log('✅ Chat / AI OK', 'success');
+                }
+
+                log('=== FULL SYSTEM TEST COMPLETED SUCCESSFULLY ===', 'success');
+                alert('Full System Test passed! Check logs for details.');
+
+            } catch (err) {
+                log(`❌ TEST FAILED: ${err.message}`, 'error');
+                alert(`Test failed: ${err.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = orig;
+            }
+        }
+
+        // ── TTS ──────────────────────────────────────────────────────────────────────
+        let lastAiReply = '';
+
+        function getTextForTts() {
+            return document.getElementById('tts-text').value.trim() || lastAiReply;
+        }
+
+        function speakBrowser() {
+            const text = getTextForTts();
+            if (!text) { document.getElementById('tts-status').innerText = 'No text to speak.'; return; }
+            if (!window.speechSynthesis) { document.getElementById('tts-status').innerText = 'Web Speech API not supported in this browser.'; return; }
+            window.speechSynthesis.cancel();
+            const lang = document.getElementById('tts-lang').value;
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = lang === 'ru' ? 'ru-RU' : lang === 'uz' ? 'uz-UZ' : 'en-US';
+            utter.rate = 0.95;
+            utter.onstart = () => document.getElementById('tts-status').innerText = 'Speaking...';
+            utter.onend = () => document.getElementById('tts-status').innerText = 'Done.';
+            utter.onerror = e => document.getElementById('tts-status').innerText = `Error: ${e.error}`;
+            window.speechSynthesis.speak(utter);
+        }
+
+        async function speakBackend() {
+            const text = getTextForTts();
+            if (!text) { document.getElementById('tts-status').innerText = 'No text to speak.'; return; }
+            const lang = document.getElementById('tts-lang').value;
+            document.getElementById('tts-status').innerText = 'Fetching audio from backend...';
+            const encoded = encodeURIComponent(text.substring(0, 200));
+            const audioUrl = `${baseUrl}/tts/synthesize?text=${encoded}&lang=${lang}`;
+            const audio = document.getElementById('tts-audio');
+            audio.src = audioUrl;
+            audio.style.display = 'block';
+            try {
+                await audio.play();
+                document.getElementById('tts-status').innerText = 'Playing backend TTS audio...';
+                audio.onended = () => document.getElementById('tts-status').innerText = 'Done.';
+            } catch (e) {
+                document.getElementById('tts-status').innerText = `Playback error: ${e.message}. Check /tts/synthesize endpoint.`;
+            }
+        }
+
+        function stopSpeech() {
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            const audio = document.getElementById('tts-audio');
+            audio.pause();
+            audio.currentTime = 0;
+            document.getElementById('tts-status').innerText = 'Stopped.';
+        }
+
+        function readResponseAloud() {
+            const outputEl = document.getElementById('response-output');
+            let text = outputEl.innerText || '';
+            // Try to extract AI reply text from JSON
+            try {
+                const parsed = JSON.parse(text);
+                if (parsed.aiResponse) text = parsed.aiResponse;
+                else if (parsed.content) text = parsed.content;
+                else if (parsed.reply) text = parsed.reply;
+            } catch {}
+            if (!text || text === 'Response will appear here...') return;
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(text.substring(0, 300));
+                utter.rate = 0.95;
+                window.speechSynthesis.speak(utter);
+            }
+        }
+
+        // ── AI Chat Tab ──────────────────────────────────────────────────────────────
+        let aiChatId = parseInt(localStorage.getItem('ai_chat_id') || '0') || null;
+
+        async function createAiChat() {
+            if (!currentToken) { log('Login first.', 'error'); return; }
+            const famId = currentFamilyId;
+            if (!famId) { log('No family found. Login with testparent@carenestai.local or click "Create My First Family".', 'error'); return; }
+            const res = await api('POST', '/chats', { familyId: famId, chatType: 'Family', title: 'AI Assistant Chat' });
+            if (res.status === 201) {
+                aiChatId = res.data.id;
+                currentChatId = aiChatId;
+                localStorage.setItem('ai_chat_id', aiChatId);
+                document.getElementById('ai-chat-id').value = aiChatId;
+                document.getElementById('ai-status-info').innerText = `Chat ready! ID=${aiChatId}`;
+                appendAiMessage('system', `Chat created (ID=${aiChatId}). Family context loaded.`);
+                log(`AI Chat created (ID=${aiChatId})`, 'success');
+            } else {
+                log(`Chat creation failed: ${JSON.stringify(res.data)}`, 'error');
+            }
+        }
+
+        async function sendAiMessage() {
+            const content = document.getElementById('ai-message').value.trim();
+            if (!content) return;
+            const chatId = aiChatId || parseInt(document.getElementById('ai-chat-id').value);
+            if (!chatId) { log('Create a chat first (AI Chat tab → New Chat).', 'error'); return; }
+            const locale = document.getElementById('ai-locale').value;
+
+            appendAiMessage('user', content);
+            document.getElementById('ai-message').value = '';
+
+            const res = await api('POST', `/chats/${chatId}/messages`, { content, inputMode: 'Text', locale });
+            if (res.status === 200) {
+                const reply = res.data.aiResponse || res.data.content || '(no reply)';
+                lastAiReply = reply;
+                document.getElementById('tts-text').value = reply;
+                appendAiMessage('assistant', reply);
+                document.getElementById('tts-btn').style.display = 'inline-block';
+            } else {
+                appendAiMessage('error', `Error ${res.status}: ${JSON.stringify(res.data)}`);
+                if (res.status === 403) {
+                    // Stale chat ID from a different session — clear it so the user can create a new one
+                    aiChatId = null;
+                    currentChatId = null;
+                    localStorage.removeItem('ai_chat_id');
+                    const chatInput = document.getElementById('ai-chat-id');
+                    if (chatInput) chatInput.value = '';
+                    document.getElementById('ai-status-info').innerText = 'Chat access denied (wrong session). Click "New Chat" to create one.';
+                    log('Chat 403 — stale chat ID cleared. Click "New Chat".', 'warn');
+                }
+            }
+        }
+
+        function appendAiMessage(role, content) {
+            const log_el = document.getElementById('ai-chat-log');
+            const colors = { user: '#818cf8', assistant: '#34d399', system: '#94a3b8', error: '#ef4444' };
+            const labels = { user: 'You', assistant: 'AI', system: 'System', error: 'Error' };
+            const div = document.createElement('div');
+            div.style.cssText = `margin-bottom:10px;padding:6px 10px;border-radius:6px;border-left:3px solid ${colors[role]||'#64748b'};background:rgba(255,255,255,0.03);`;
+            div.innerHTML = `<div style="font-size:0.7rem;color:${colors[role]};margin-bottom:3px;font-weight:600;">${labels[role]||role}</div><div style="color:#f1f5f9;white-space:pre-wrap;">${escapeHtml(content)}</div>`;
+            log_el.appendChild(div);
+            log_el.scrollTop = log_el.scrollHeight;
+        }
+
+        async function quickAiTest(msg, locale) {
+            switchTab('ai');
+            const chatId = aiChatId || parseInt(document.getElementById('ai-chat-id').value);
+            if (!chatId) {
+                document.getElementById('ai-message').value = msg;
+                document.getElementById('ai-locale').value = locale;
+                log('No chat ID. Click "New Chat" first, then send the message.', 'warning');
+                return;
+            }
+            document.getElementById('ai-message').value = msg;
+            document.getElementById('ai-locale').value = locale;
+            await sendAiMessage();
+        }
+
+        // Restore AI chat ID from storage
+        if (aiChatId) document.getElementById('ai-chat-id') && (document.getElementById('ai-chat-id').value = aiChatId);
+    </script>
+</body>
+</html>
