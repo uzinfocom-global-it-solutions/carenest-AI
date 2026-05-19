@@ -26,6 +26,7 @@ class VoicePlaybackOrchestrator extends ChangeNotifier {
     await _tts.setSpeechRate(0.88);
     await _tts.setVolume(1.0);
     await _tts.setPitch(1.0);
+    await _setVoiceForLocale('ru-RU');
 
     _tts.setStartHandler(() {
       _playing = true;
@@ -105,11 +106,31 @@ class VoicePlaybackOrchestrator extends ChangeNotifier {
     _speak(job);
   }
 
+  Future<void> _setVoiceForLocale(String locale) async {
+    try {
+      final voices = await _tts.getVoices;
+      if (voices == null) return;
+      final langCode = locale.split('-').first.toLowerCase();
+      for (final v in voices as List) {
+        final voice = v as Map<Object?, Object?>;
+        final vLocale = (voice['locale'] as String? ?? '').toLowerCase();
+        if (vLocale.startsWith(langCode)) {
+          await _tts.setVoice({
+            'name': voice['name'] as String,
+            'locale': voice['locale'] as String,
+          });
+          return;
+        }
+      }
+    } catch (_) {}
+  }
+
   Future<void> _speak(_TtsJob job) async {
     if (job.locale != _currentLocale) {
       _currentLocale = job.locale;
       await _tts.setLanguage(job.locale);
       await _tts.setSpeechRate(job.locale.startsWith('ru') ? 0.88 : 0.9);
+      await _setVoiceForLocale(job.locale);
     }
 
     final cleaned = _cleanForTts(job.text);

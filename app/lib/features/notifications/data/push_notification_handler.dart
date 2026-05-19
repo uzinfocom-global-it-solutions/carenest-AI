@@ -44,10 +44,11 @@ class PushNotificationHandler {
           : priority == NotificationPriorityLevel.high
               ? 50
               : 10;
+      final locale = await _ttsLocale();
       await VoicePlaybackOrchestrator.instance.enqueue(
         text,
         priority: ttsPriority,
-        locale: 'ru-RU',
+        locale: locale,
         interruptIfHigher: true,
       );
     }
@@ -95,6 +96,16 @@ class PushNotificationHandler {
       return v != 'false';
     } catch (_) {
       return true;
+    }
+  }
+
+  static Future<String> _ttsLocale() async {
+    try {
+      const s = FlutterSecureStorage();
+      final v = await s.read(key: 'app_language');
+      return v == 'ru' ? 'ru-RU' : 'en-US';
+    } catch (_) {
+      return 'en-US';
     }
   }
 }
