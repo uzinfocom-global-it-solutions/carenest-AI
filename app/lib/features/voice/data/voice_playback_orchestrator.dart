@@ -15,6 +15,10 @@ class VoicePlaybackOrchestrator extends ChangeNotifier {
   String _currentLocale = 'ru-RU';
   _TtsJob? _currentJob;
 
+  // кеш голосов: locale-prefix → {name, locale}
+  final Map<String, Map<String, String>> _voiceCache = {};
+  bool _voicesFetched = false;
+
   bool get isPlaying => _playing;
   String? get currentText => _currentJob?.text;
 
@@ -107,21 +111,31 @@ class VoicePlaybackOrchestrator extends ChangeNotifier {
   }
 
   Future<void> _setVoiceForLocale(String locale) async {
+    final langCode = locale.split('-').first.toLowerCase();
+    if (_voiceCache.containsKey(langCode)) {
+      final cached = _voiceCache[langCode];
+      if (cached != null) await _tts.setVoice(cached);
+      return;
+    }
     try {
-      final voices = await _tts.getVoices;
-      if (voices == null) return;
-      final langCode = locale.split('-').first.toLowerCase();
-      for (final v in voices as List) {
-        final voice = v as Map<Object?, Object?>;
-        final vLocale = (voice['locale'] as String? ?? '').toLowerCase();
-        if (vLocale.startsWith(langCode)) {
-          await _tts.setVoice({
-            'name': voice['name'] as String,
-            'locale': voice['locale'] as String,
-          });
-          return;
+      if (!_voicesFetched) {
+        _voicesFetched = true;
+        final voices = await _tts.getVoices;
+        if (voices != null) {
+          for (final v in voices as List) {
+            final voice = v as Map<Object?, Object?>;
+            final vLocale = (voice['locale'] as String? ?? '').toLowerCase();
+            final vName = voice['name'] as String?;
+            if (vName == null) continue;
+            final code = vLocale.split('-').first;
+            if (!_voiceCache.containsKey(code)) {
+              _voiceCache[code] = {'name': vName, 'locale': voice['locale'] as String};
+            }
+          }
         }
       }
+      final selected = _voiceCache[langCode];
+      if (selected != null) await _tts.setVoice(selected);
     } catch (_) {}
   }
 

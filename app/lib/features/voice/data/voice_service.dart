@@ -17,37 +17,45 @@ class VoiceService extends ChangeNotifier {
   String _transcript = '';
   String _currentTtsLocale = 'en-US';
 
+  // кеш голосов: locale-prefix → {name, locale}
+  final Map<String, Map<String, String>> _voiceCache = {};
+  bool _voicesFetched = false;
+
   bool get isListening => _isListening;
   bool get isSpeaking => _isSpeaking;
   String get transcript => _transcript;
 
   Future<void> _setVoiceForLocale(String locale) async {
+    final langCode = locale.split('-').first.toLowerCase();
+    if (_voiceCache.containsKey(langCode)) {
+      final cached = _voiceCache[langCode];
+      if (cached != null) await _tts.setVoice(cached);
+      return;
+    }
     try {
-      final voices = await _tts.getVoices;
-      if (voices == null) return;
-      final langCode = locale.split('-').first.toLowerCase();
-      for (final v in voices as List) {
-        final voice = v as Map<Object?, Object?>;
-        final vLocale = (voice['locale'] as String? ?? '').toLowerCase();
-        if (vLocale.startsWith(langCode)) {
-          await _tts.setVoice({
-            'name': voice['name'] as String,
-            'locale': voice['locale'] as String,
-          });
-          return;
+      if (!_voicesFetched) {
+        _voicesFetched = true;
+        final voices = await _tts.getVoices;
+        if (voices != null) {
+          for (final v in voices as List) {
+            final voice = v as Map<Object?, Object?>;
+            final vLocale = (voice['locale'] as String? ?? '').toLowerCase();
+            final vName = voice['name'] as String?;
+            if (vName == null) continue;
+            final code = vLocale.split('-').first;
+            if (!_voiceCache.containsKey(code)) {
+              _voiceCache[code] = {'name': vName, 'locale': voice['locale'] as String};
+            }
+          }
         }
       }
+      final selected = _voiceCache[langCode];
+      if (selected != null) await _tts.setVoice(selected);
     } catch (_) {}
   }
 
   Future<void> _initTts(String locale) async {
     _currentTtsLocale = locale;
-    await _tts.setLanguage(locale);
-    await _tts.setSpeechRate(locale.startsWith('ru') ? 0.45 : 0.48);
-    await _tts.setVolume(1.0);
-    await _tts.setPitch(locale.startsWith('ru') ? 1.0 : 1.05);
-    await _setVoiceForLocale(locale);
-
     _tts.setStartHandler(() {
       _isSpeaking = true;
       notifyListeners();
@@ -64,6 +72,11 @@ class VoiceService extends ChangeNotifier {
       _isSpeaking = false;
       notifyListeners();
     });
+    await _tts.setLanguage(locale);
+    await _tts.setSpeechRate(locale.startsWith('ru') ? 0.45 : 0.48);
+    await _tts.setVolume(1.0);
+    await _tts.setPitch(locale.startsWith('ru') ? 1.0 : 1.05);
+    await _setVoiceForLocale(locale);
   }
 
   Future<void> ensureLocale(String ttsLocale) async {
@@ -188,7 +201,7 @@ class VoiceService extends ChangeNotifier {
   Future<void> speak(String text, {String ttsLocale = 'en-US'}) async {
     if (text.trim().isEmpty) return;
     await ensureLocale(ttsLocale);
-    await _tts.stop();
+    if (_isSpeaking) await _tts.stop();
     final isRu = ttsLocale.startsWith('ru');
     await _tts.speak(_cleanForTts(text, isRussian: isRu));
   }
