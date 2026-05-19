@@ -189,6 +189,23 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
             .Select(r => $"[{r.RecommendationType}] {r.Title}: {r.Message}")
             .ToListAsync(cancellationToken);
 
+        var activeSessions = await _context.HealthMonitoringSessions
+            .Where(s => s.FamilyId == chat.FamilyId && !s.IsResolved
+                     && s.StartedAt >= DateTimeOffset.UtcNow.AddHours(-24))
+            .Include(s => s.Child)
+            .OrderByDescending(s => s.RiskScore)
+            .Take(3)
+            .ToListAsync(cancellationToken);
+
+        var activeMonitorings = activeSessions.Select(s => new ActiveMonitoringContext(
+            SessionId: s.Id,
+            ChildName: s.Child?.DisplayName ?? "ребёнок",
+            IssueType: s.IssueType.ToString(),
+            Severity: s.Severity.ToString(),
+            RiskScore: s.RiskScore,
+            LastUserResponse: s.LastUserResponse,
+            NextFollowUpAt: s.NextFollowUpAt)).ToList();
+
         var intentContext = new IntentContext(
             chat.FamilyId,
             family?.Name ?? "Family",
@@ -198,7 +215,8 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
             latestWeather,
             upcomingEventContexts,
             recentRecs,
-            conversationSummary);
+            conversationSummary,
+            activeMonitorings);
 
         var userMessage = new ChatMessage
         {
@@ -322,6 +340,11 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
                     {
                         await _healthMonitoring.UpdateLifecyclePhaseAsync(
                             awaitingSession.Id, MonitoringLifecyclePhase.Critical, CancellationToken.None);
+
+                        // Schedule urgent follow-up in 5 minutes
+                        var nextAt = DateTimeOffset.UtcNow.AddMinutes(5);
+                        await _healthMonitoring.MarkFollowUpSentAsync(awaitingSession.Id, nextAt, CancellationToken.None);
+                        await ScheduleFollowUpVoiceActionAsync(awaitingSession, analysis, nextAt, chat.FamilyId, CancellationToken.None);
                     }
                     else
                     {
@@ -335,6 +358,9 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
                                 ? MonitoringLifecyclePhase.Stabilizing
                                 : MonitoringLifecyclePhase.Monitoring,
                             CancellationToken.None);
+
+                        // Schedule next follow-up voice action
+                        await ScheduleFollowUpVoiceActionAsync(awaitingSession, analysis, nextAt, chat.FamilyId, CancellationToken.None);
                     }
 
                     var memberIds = await _context.FamilyMembers
@@ -439,6 +465,52 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
         return new ChatMessageResult(
             aiMessage.Id, request.ChatId, null, SenderTypeEnum.Ai, aiMessageType,
             aiResponse, aiResponse, aiMessage.ParsedIntent, successful, aiMessage.CreatedAt);
+    }
+
+    private async Task ScheduleFollowUpVoiceActionAsync(
+        HealthMonitoringSession session,
+        ResponseAnalysisResult analysis,
+        DateTimeOffset scheduledAt,
+        int familyId,
+        CancellationToken ct)
+    {
+        var nextQuestion = await _followUpIntelligence.GenerateNextFollowUpAsync(session, ct);
+        if (nextQuestion is null) return;
+
+        var memberIds = await _context.FamilyMembers
+            .Where(m => m.FamilyId == familyId && m.Status == FamilyMemberStatusEnum.Active)
+            .Select(m => m.UserId)
+            .ToListAsync(ct);
+
+        var metadata = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            sessionId  = session.Id,
+            familyId,
+            isFollowUp = true,
+            change     = analysis.SymptomChange.ToString(),
+        });
+
+        var idemBase = $"followup-response:{session.Id}:{scheduledAt:yyyyMMddHHmm}";
+        var priority = analysis.ShouldEscalate ? NotificationPriority.High : NotificationPriority.Normal;
+
+        foreach (var uid in memberIds)
+        {
+            try
+            {
+                await _voiceService.CreateAsync(
+                    familyId, uid,
+                    VoiceActionType.FollowUpCheck,
+                    nextQuestion.Question,
+                    priority,
+                    requiresConfirmation: false,
+                    escalationEnabled: analysis.ShouldEscalate,
+                    scheduledAt: scheduledAt,
+                    metadata: metadata,
+                    idempotencyKey: $"{idemBase}:{uid[..Math.Min(8, uid.Length)]}",
+                    ct);
+            }
+            catch { /* follow-up scheduling must never abort the chat response */ }
+        }
     }
 
     private static string BuildParsedIntentJson(ParsedIntent intent)

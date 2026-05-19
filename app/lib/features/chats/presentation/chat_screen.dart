@@ -181,6 +181,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             ),
             if (isReady && chatCtrl.error != null && hasMessages)
               _ErrorBanner(message: chatCtrl.error!),
+            _QuickActionsBar(
+              messages: messages,
+              onAction: (text) async {
+                _inputController.text = text;
+                await _send(chatCtrl);
+              },
+            ),
             _Composer(
               controller: _inputController,
               enabled: isReady && !chatCtrl.isSending,
@@ -753,6 +760,87 @@ class _ProactiveMessageCard extends StatelessWidget {
       default:
         return 'AI СООБЩЕНИЕ';
     }
+  }
+}
+
+class _QuickActionsBar extends StatelessWidget {
+  const _QuickActionsBar({
+    required this.messages,
+    required this.onAction,
+  });
+
+  final List<ChatMessageModel> messages;
+  final void Function(String) onAction;
+
+  static bool _isHealthFollowUp(List<ChatMessageModel> messages) {
+    if (messages.isEmpty) return false;
+    // Check if the last AI message looks like a health follow-up question
+    final lastAi = messages.lastWhere(
+      (m) => m.senderType == 'Ai',
+      orElse: () => messages.last,
+    );
+    if (lastAi.senderType != 'Ai') return false;
+    // Check if the last user message was sent AFTER the last AI message
+    final lastUserIdx = messages.lastIndexWhere((m) => m.senderType == 'User');
+    final lastAiIdx = messages.lastIndexWhere((m) => m.senderType == 'Ai');
+    if (lastUserIdx > lastAiIdx) return false; // user already replied
+    // Check for health monitoring keywords
+    final content = lastAi.content.toLowerCase();
+    return content.contains('самочувствие') ||
+        content.contains('температура') ||
+        content.contains('кашель') ||
+        content.contains('стало лучше') ||
+        content.contains('улучшил') ||
+        content.contains('как себя чувствует') ||
+        content.contains('follow') ||
+        content.contains('how is') ||
+        content.contains('feeling') ||
+        lastAi.messageType == 'Question';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isHealthFollowUp(messages)) return const SizedBox.shrink();
+
+    final isRu = context.read<AppSettingsController>().language.name == 'russian';
+
+    final actions = isRu
+        ? [
+            ('Стало лучше', const Color(0xFF22C55E)),
+            ('Нет улучшений', const Color(0xFFEF4444)),
+            ('Дал лекарство', const Color(0xFF5B8AFF)),
+            ('Проверю позже', const Color(0xFF94A3B8)),
+          ]
+        : [
+            ('Better now', const Color(0xFF22C55E)),
+            ('No improvement', const Color(0xFFEF4444)),
+            ('Gave medicine', const Color(0xFF5B8AFF)),
+            ("I'll check later", const Color(0xFF94A3B8)),
+          ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFF),
+        border: Border(top: BorderSide(color: AppColors.line)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: actions
+              .map((a) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: _QuickActionButton(
+                      label: a.$1,
+                      color: a.$2,
+                      onTap: () => onAction(a.$1),
+                    ),
+                  ))
+              .toList(),
+        ),
+      ),
+    );
   }
 }
 

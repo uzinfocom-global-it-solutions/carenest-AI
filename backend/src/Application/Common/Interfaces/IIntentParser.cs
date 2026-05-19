@@ -14,7 +14,17 @@ public record IntentContext(
     WeatherContext? Weather = null,
     IReadOnlyList<UpcomingEventContext>? UpcomingEvents = null,
     IReadOnlyList<string>? RecentRecommendations = null,
-    string? ConversationSummary = null);
+    string? ConversationSummary = null,
+    IReadOnlyList<ActiveMonitoringContext>? ActiveMonitorings = null);
+
+public record ActiveMonitoringContext(
+    int SessionId,
+    string ChildName,
+    string IssueType,
+    string Severity,
+    int RiskScore,
+    string? LastUserResponse,
+    DateTimeOffset? NextFollowUpAt);
 
 public record WeatherContext(
     string LocationKey,

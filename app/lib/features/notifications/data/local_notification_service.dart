@@ -1,6 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-
+import 'push_notification_handler.dart';
 class LocalNotificationService {
   LocalNotificationService._();
   static final LocalNotificationService instance = LocalNotificationService._();
@@ -15,9 +16,9 @@ class LocalNotificationService {
   Future<void> initialize() async {
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
     );
 
     await _plugin.initialize(
@@ -25,6 +26,11 @@ class LocalNotificationService {
       onDidReceiveNotificationResponse: _onNotificationResponse,
       onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationResponse,
     );
+
+    // Required on Android 13+ (API 33) — without this the OS silently drops all notifications
+    await _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
 
     await _createChannels();
   }
@@ -64,7 +70,6 @@ class LocalNotificationService {
         showBadge: true,
       ),
     ];
-
     final androidPlugin = _plugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
@@ -133,7 +138,7 @@ class LocalNotificationService {
           : '🤖 CareNestAI',
       body: text,
       priority: priority,
-      payload: 'voice_action:$actionId',
+      payload: jsonEncode({'type': 'voice_action', 'actionId': actionId}),
       actions: actions,
     );
   }
@@ -143,28 +148,35 @@ class LocalNotificationService {
 
   static void _onNotificationResponse(NotificationResponse response) {
     debugPrint('[LocalNotif] action=${response.actionId} payload=${response.payload}');
-    NotificationActionRouter.handle(response.actionId, response.payload);
+    if (response.actionId == null) {
+      // Body tap → route to chat
+      NotificationTapRouter.handleTap(response.payload);
+    } else {
+      // Action button (confirm / skip / remind_later)
+      NotificationActionRouter.handle(response.actionId, response.payload);
+    }
   }
 
   @pragma('vm:entry-point')
   static void _onBackgroundNotificationResponse(NotificationResponse response) {
-    NotificationActionRouter.handle(response.actionId, response.payload);
+    if (response.actionId == null) {
+      NotificationTapRouter.handleTap(response.payload);
+    } else {
+      NotificationActionRouter.handle(response.actionId, response.payload);
+    }
   }
-
   String _channelForPriority(NotificationPriorityLevel p) => switch (p) {
         NotificationPriorityLevel.emergency => _emergencyChannelId,
         NotificationPriorityLevel.high => _highChannelId,
         NotificationPriorityLevel.medication => _medicationChannelId,
         _ => _defaultChannelId,
       };
-
   String _channelNameForPriority(NotificationPriorityLevel p) => switch (p) {
         NotificationPriorityLevel.emergency => 'Экстренные уведомления',
         NotificationPriorityLevel.high => 'Важные уведомления',
         NotificationPriorityLevel.medication => 'Лекарства',
         _ => 'Уведомления',
       };
-
   Importance _importanceForPriority(NotificationPriorityLevel p) => switch (p) {
         NotificationPriorityLevel.emergency => Importance.max,
         NotificationPriorityLevel.high => Importance.high,
@@ -178,19 +190,15 @@ class LocalNotificationService {
         _ => Priority.defaultPriority,
       };
 }
-
 enum NotificationPriorityLevel { low, normal, high, emergency, medication }
-
 class NotificationActionRouter {
   static void handle(String? actionId, String? payload) {
     debugPrint('[NotifAction] action=$actionId payload=$payload');
     _actionStream.add(NotificationAction(actionId: actionId, payload: payload));
   }
-
   static final NotificationActionStream _actionStream = NotificationActionStream();
   static NotificationActionStream get stream => _actionStream;
 }
-
 class NotificationActionStream {
   final _listeners = <void Function(NotificationAction)>[];
 
@@ -199,12 +207,10 @@ class NotificationActionStream {
       l(action);
     }
   }
-
   void listen(void Function(NotificationAction) listener) {
     _listeners.add(listener);
   }
 }
-
 class NotificationAction {
   final String? actionId;
   final String? payload;

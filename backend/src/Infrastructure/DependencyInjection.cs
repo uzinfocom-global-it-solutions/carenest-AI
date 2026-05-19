@@ -211,6 +211,7 @@ public static class DependencyInjection
             builder.Services.AddHostedService<FollowUpDispatchWorker>();
             builder.Services.AddHostedService<ContinuousContextAnalysisWorker>();
             builder.Services.AddHostedService<EventReminderDispatchWorker>();
+            builder.Services.AddHostedService<ProactiveConversationService>();
         }
     }
 }

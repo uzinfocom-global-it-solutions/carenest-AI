@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using Backend.Application.Common.Interfaces;
 using Backend.Domain.Entities;
 using Backend.Domain.Enums;
@@ -397,7 +398,7 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
         {
             sb.AppendLine("АКТИВНЫЙ МОНИТОРИНГ ЗДОРОВЬЯ (приоритет!):");
             foreach (var s in sessions)
-                sb.AppendLine($"  {s.ChildName ?? "ребёнок"}: {s.IssueType}, тяжесть {s.Severity}/10, риск {s.RiskScore:P0}");
+                sb.AppendLine($"  {s.Child?.DisplayName ?? "ребёнок"}: {s.IssueType}, тяжесть {s.Severity}, риск {s.RiskScore}/100");
         }
 
         if (context.TodayEvents.Count > 0)

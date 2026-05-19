@@ -180,6 +180,26 @@ public class IntentParser : IIntentParser
         if (ctx?.RecentRecommendations is { Count: > 0 } rr)
             recsBlock = string.Join("\n", rr.Select(r => $"  • {r}"));
 
+        string monitoringBlock = "";
+        if (ctx?.ActiveMonitorings is { Count: > 0 } am)
+        {
+            var now2 = DateTimeOffset.UtcNow;
+            monitoringBlock = "\nACTIVE HEALTH MONITORING (CRITICAL — acknowledge these in your reply):\n" +
+                string.Join("\n", am.Select(m =>
+                {
+                    var nextStr = m.NextFollowUpAt.HasValue
+                        ? $", next check in {(int)(m.NextFollowUpAt.Value - now2).TotalMinutes} min"
+                        : "";
+                    var lastStr = m.LastUserResponse is { Length: > 0 }
+                        ? $", last response: \"{m.LastUserResponse[..Math.Min(80, m.LastUserResponse.Length)]}\""
+                        : "";
+                    return $"  • {m.ChildName}: {m.IssueType} — severity {m.Severity}, risk {m.RiskScore}/100{nextStr}{lastStr}";
+                })) + "\n" +
+                "MONITORING RULE: If the parent's message is a response to a health follow-up question " +
+                "(says 'better', 'worse', gives a temperature, etc.), acknowledge it warmly and confirm " +
+                "you're tracking it. Tell them when you'll check back.\n";
+        }
+
         var summaryBlock = ctx?.ConversationSummary is { Length: > 0 } s2
             ? $"\nCONVERSATION MEMORY (earlier messages):\n{s2}\n"
             : "";
@@ -208,18 +228,18 @@ CRITICAL: If the list above contains events marked [TODAY], the parent HAS plans
 
 RECENT AI ADVICE (do not repeat these verbatim, build on them):
 {recsBlock}
-{summaryBlock}
+{monitoringBlock}{summaryBlock}
 ═══════════════════════════════════
 YOUR RESPONSE RULES:
 
 1. LANGUAGE: Always respond in English. Voice TTS will read your reply aloud.
-2. TTS-SAFE REPLY: The `reply` field is spoken aloud. Never use: → • ★ / — () [] or abbreviations like "e.g.", "i.e.", "AQI". Write numbers as words when spoken naturally ("thirty-eight degrees", not "38°C"). No markdown, no lists.
-3. STYLE: Warm, direct, confident — like a knowledgeable friend, not a textbook. Never say "I recommend", "You should consider", or "It is important to". Just say what to do.
+2. TTS-SAFE REPLY: The `reply` field is spoken aloud. Never use: → • ★ / — () [] or abbreviations like ""e.g."", ""i.e."", ""AQI"". Write numbers as words when spoken naturally (""thirty-eight degrees"", not ""38°C""). No markdown, no lists.
+3. STYLE: Warm, direct, confident — like a knowledgeable friend, not a textbook. Never say ""I recommend"", ""You should consider"", or ""It is important to"". Just say what to do.
 4. LENGTH: 2–4 sentences for simple answers. Up to 6 for complex plans. One idea per sentence.
-5. PERSONALIZATION: Always use the child's first name and age. Reference their specific sensitivities and routines. Generic advice ("stay hydrated", "dress warmly") is forbidden without personalization.
-6. WEATHER INTEGRATION: Every outdoor/clothing question MUST use the real weather numbers above. Say "it's thirty-two degrees and sunny", not "the weather is hot".
+5. PERSONALIZATION: Always use the child's first name and age. Reference their specific sensitivities and routines. Generic advice (""stay hydrated"", ""dress warmly"") is forbidden without personalization.
+6. WEATHER INTEGRATION: Every outdoor/clothing question MUST use the real weather numbers above. Say ""it's thirty-two degrees and sunny"", not ""the weather is hot"".
 7. PROACTIVE: If you notice a relevant risk (high UV + UV-sensitive child, cold + respiratory child, outdoor event + bad AQI), mention it briefly even if not asked. One sentence max.
-8. MEMORY: Reference prior messages naturally ("As I mentioned...", "Since Ivan has asthma..."). Never re-ask information already given.
+8. MEMORY: Reference prior messages naturally (""As I mentioned..."", ""Since Ivan has asthma...""). Never re-ask information already given.
 9. AUTO-NOTE: When the parent mentions a health fact (allergy, condition, symptom) in passing, silently add a note via add_note. Don't announce it unless it's important.
 10. DON'T OVER-PROPOSE: Only create proposals when the action is explicit and clear. If unsure, ask one clarifying question instead of proposing.
 
@@ -342,6 +362,26 @@ Also set detected_issue_type to one of: fever|asthma|cough|vomiting|rash|allergy
         if (ctx?.RecentRecommendations is { Count: > 0 } rr)
             recsBlock = string.Join("\n", rr.Select(r => $"  • {r}"));
 
+        string ruMonitoringBlock = "";
+        if (ctx?.ActiveMonitorings is { Count: > 0 } amRu)
+        {
+            var now3 = DateTimeOffset.UtcNow;
+            ruMonitoringBlock = "\nАКТИВНЫЙ МОНИТОРИНГ ЗДОРОВЬЯ (ВАЖНО — упоминай в ответе):\n" +
+                string.Join("\n", amRu.Select(m =>
+                {
+                    var nextStr = m.NextFollowUpAt.HasValue
+                        ? $", следующая проверка через {(int)(m.NextFollowUpAt.Value - now3).TotalMinutes} мин"
+                        : "";
+                    var lastStr = m.LastUserResponse is { Length: > 0 }
+                        ? $", последний ответ: \"{m.LastUserResponse[..Math.Min(80, m.LastUserResponse.Length)]}\""
+                        : "";
+                    return $"  • {m.ChildName}: {m.IssueType} — тяжесть {m.Severity}, риск {m.RiskScore}/100{nextStr}{lastStr}";
+                })) + "\n" +
+                "ПРАВИЛО МОНИТОРИНГА: Если сообщение родителя — это ответ на вопрос о самочувствии " +
+                "(говорит «лучше», «хуже», называет температуру и т.п.) — признай это тепло и подтверди " +
+                "что следишь за ситуацией. Скажи когда проверишь снова.\n";
+        }
+
         var summaryBlock = ctx?.ConversationSummary is { Length: > 0 } s2
             ? $"\nПАМЯТЬ РАЗГОВОРА (более ранние сообщения):\n{s2}\n"
             : "";
@@ -370,7 +410,7 @@ Also set detected_issue_type to one of: fever|asthma|cough|vomiting|rash|allergy
 
 НЕДАВНИЕ СОВЕТЫ ИИ (не повторяй дословно — развивай их):
 {recsBlock}
-{summaryBlock}
+{ruMonitoringBlock}{summaryBlock}
 ═══════════════════════════════════
 ПРАВИЛА ОТВЕТА:
 

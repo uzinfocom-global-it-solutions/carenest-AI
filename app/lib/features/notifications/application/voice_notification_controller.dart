@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../../../shared/api/api_client.dart';
 import '../data/local_notification_service.dart';
@@ -128,12 +129,14 @@ class VoiceNotificationController extends ChangeNotifier {
 
   void onSseEvent(String eventType, Map<String, dynamic> data) {
     switch (eventType) {
+      case 'push_notification':
+        // Backend sent a push via SSE (LocalPushNotificationService path)
+        PushNotificationHandler.handleSseMessage(data);
       case 'voice_action_created':
       case 'voice_action_dispatch':
-        PushNotificationHandler.handleSseMessage({
-          'type': data['type'] ?? 'voice_action',
-          ...data,
-        });
+        // Spread first so explicit keys override — data['type'] is VoiceActionType
+        // name (e.g. "Custom"), not the literal 'voice_action' that the handler needs.
+        PushNotificationHandler.handleSseMessage({...data, 'type': 'voice_action'});
         loadPending();
       case 'voice_action_confirmed':
         final id = data['actionId'] as int?;
@@ -144,35 +147,35 @@ class VoiceNotificationController extends ChangeNotifier {
         if (id != null) _updateLocalStatus(id, 'Skipped');
         notifyListeners();
       case 'escalation_step1':
-        PushNotificationHandler.handleSseMessage({
-          'type': 'voice_action',
-          'priority': 'high',
-          ...data,
-        });
+        PushNotificationHandler.handleSseMessage(
+            {...data, 'type': 'voice_action', 'priority': 'high'});
         loadPending();
       case 'escalation_step2':
-        PushNotificationHandler.handleSseMessage({
-          'type': 'voice_action',
-          'priority': 'high',
-          ...data,
-        });
+        PushNotificationHandler.handleSseMessage(
+            {...data, 'type': 'voice_action', 'priority': 'high'});
         loadPending();
       case 'emergency_escalation':
-        PushNotificationHandler.handleSseMessage({
-          'type': 'voice_action',
-          'priority': 'emergency',
-          ...data,
-        });
+        PushNotificationHandler.handleSseMessage(
+            {...data, 'type': 'voice_action', 'priority': 'emergency'});
         loadPending();
     }
   }
 
   void _onNotificationAction(NotificationAction action) {
     final payload = action.payload ?? '';
-    final parts = payload.split(':');
-    if (parts.length < 2) return;
+    int? actionId;
 
-    final actionId = int.tryParse(parts[1]);
+    // New format: JSON payload {"type":"voice_action","actionId":123}
+    // Legacy format: "voice_action:123"
+    try {
+      final data = jsonDecode(payload) as Map<String, dynamic>;
+      final raw = data['actionId'];
+      actionId = raw is int ? raw : int.tryParse(raw?.toString() ?? '');
+    } catch (_) {
+      final parts = payload.split(':');
+      if (parts.length >= 2) actionId = int.tryParse(parts[1]);
+    }
+
     if (actionId == null) return;
 
     switch (action.actionId) {

@@ -147,17 +147,9 @@ class ChatController extends ChangeNotifier {
     if (eventType == 'chat_message_created') {
       final chatId = data['chatId'] as int?;
       if (chatId != null && chatId == activeChatId) {
-        try {
-          final rawMsg = data['message'] as Map<String, dynamic>? ?? data;
-          final msg = ChatMessageModel.fromJson(rawMsg);
-          final alreadyExists = messages.any((m) => m.id == msg.id);
-          if (!alreadyExists) {
-            messages.add(msg);
-            notifyListeners();
-          }
-        } catch (e) {
-          debugPrint('[ChatController] SSE parse error: $e');
-        }
+        // Backend sends a partial payload (chatId, messageId, content only),
+        // so fetch the full message list rather than trying to build a model inline.
+        _silentRefresh();
       }
     }
   }
