@@ -369,36 +369,64 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
         IReadOnlyList<HealthMonitoringSession> sessions,
         string memoryContext)
     {
-        var parts = new List<string>();
-        parts.Add($"Время: {DateTimeOffset.UtcNow.ToLocalTime():HH:mm}.");
+        var sb = new StringBuilder();
+        var now = DateTimeOffset.UtcNow.ToLocalTime();
+        sb.AppendLine($"ВРЕМЯ: {now:HH:mm}");
 
         if (context.Weather is { } w)
-            parts.Add($"Погода: {w.ConditionSummary}, {w.TemperatureCelsius:0}°C" +
-                      (w.AqiIndex.HasValue ? $", AQI {w.AqiIndex}" : "") + ".");
-
-        foreach (var child in context.Children)
         {
-            var sens = child.Sensitivities.Count > 0
-                ? $" (чувствителен к: {string.Join(", ", child.Sensitivities)})"
-                : "";
-            parts.Add($"Ребёнок: {child.Name}, {child.AgeYears} лет{sens}.");
+            sb.Append($"ПОГОДА: {w.ConditionSummary}, {w.TemperatureCelsius:0}°C");
+            if (w.AqiIndex.HasValue)
+                sb.Append($", индекс качества воздуха {w.AqiIndex}");
+            sb.AppendLine();
+        }
+
+        if (context.Children.Count > 0)
+        {
+            sb.AppendLine("ДЕТИ:");
+            foreach (var child in context.Children)
+            {
+                sb.Append($"  {child.Name}, {child.AgeYears} лет");
+                if (child.Sensitivities.Count > 0)
+                    sb.Append($" — чувствителен к: {string.Join(", ", child.Sensitivities)}");
+                sb.AppendLine();
+            }
         }
 
         if (sessions.Count > 0)
+        {
+            sb.AppendLine("АКТИВНЫЙ МОНИТОРИНГ ЗДОРОВЬЯ (приоритет!):");
             foreach (var s in sessions)
-                parts.Add($"Активный мониторинг: {s.IssueType} (severity={s.Severity}, score={s.RiskScore}).");
-
-        if (!string.IsNullOrEmpty(memoryContext))
-            parts.Add(memoryContext);
+                sb.AppendLine($"  {s.ChildName ?? "ребёнок"}: {s.IssueType}, тяжесть {s.Severity}/10, риск {s.RiskScore:P0}");
+        }
 
         if (context.TodayEvents.Count > 0)
         {
-            var ev = context.TodayEvents.First();
-            parts.Add($"Событие сегодня: {ev.Title} в {ev.StartTime.ToLocalTime():HH:mm}.");
+            var upcoming = context.TodayEvents
+                .Where(e => e.StartTime.ToLocalTime() > now)
+                .OrderBy(e => e.StartTime)
+                .Take(2)
+                .ToList();
+            if (upcoming.Count > 0)
+            {
+                sb.AppendLine("БЛИЖАЙШИЕ СОБЫТИЯ:");
+                foreach (var ev in upcoming)
+                {
+                    var inMin = (int)(ev.StartTime.ToLocalTime() - now).TotalMinutes;
+                    sb.AppendLine($"  {ev.Title} — через {inMin} мин");
+                }
+            }
         }
 
-        parts.Add("Дай один краткий проактивный совет или уточняющий вопрос по текущей ситуации.");
-        return string.Join(" ", parts);
+        if (!string.IsNullOrEmpty(memoryContext))
+        {
+            sb.AppendLine("ЧТО УЖЕ ГОВОРИЛИ (не повторяй):");
+            sb.AppendLine($"  {memoryContext}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("Дай один голосовой совет или вопрос по самому важному из контекста выше.");
+        return sb.ToString();
     }
 
     private static string? BuildDeterministicFallback(FamilyProactiveContext context)
@@ -518,9 +546,32 @@ public sealed class AiDecisionEngine : IAiDecisionEngine
 
     private const string ProactiveSystemPrompt =
         """
-        Ты — автономный ИИ-ассистент CareNestAI для семьи. Анализируй контекст и давай
-        ОДИН краткий совет или уточняющий вопрос (1-2 предложения, только русский,
-        без markdown, без приветствий). Фокусируйся на самом важном риске прямо сейчас.
-        Учитывай память о предыдущих наблюдениях. НЕ повторяй советы из памяти.
+        Ты — проактивный голосовой ИИ-ассистент CareNestAI. Твоя роль — как заботливый
+        педиатр-друг рядом: замечаешь риски первым, говоришь коротко и конкретно.
+
+        ФОРМАТ ОТВЕТА:
+        - Только русский язык. Текст зачитывается вслух — никаких символов (→ • ★ / —),
+          никаких скобок, никаких сокращений типа "AQI" (пиши "индекс качества воздуха").
+        - ОДИН совет или вопрос. Максимум 2 предложения. Без "Привет", "Здравствуйте",
+          "Обратите внимание" — начинай сразу с сути.
+        - Называй ребёнка по имени. Конкретика, не общие фразы.
+        - НЕ повторяй то что уже говорил (память — выше в контексте).
+
+        ПРИОРИТЕТ (выбери самое важное и говори только об этом):
+        1. Активный мониторинг здоровья (жар, астма, симптомы) → срочный, спокойный тон
+        2. Погодный риск совпадает с чувствительностью ребёнка → предупреди конкретно
+        3. Лекарство или событие в ближайший час → напомни
+        4. Всё в порядке → короткий позитивный совет про активность, сон или питание
+
+        ХОРОШИЕ ПРИМЕРЫ:
+        "У Вани астма, а на улице высокий индекс качества воздуха — лучше остаться дома."
+        "Через тридцать минут прогулка Миши, а температура упала до пяти — возьмите куртку."
+        "Как Миша сейчас? Час назад температура была тридцать восемь и два."
+        "Сейчас хорошее время для прогулки — воздух чистый и тепло для Алисы."
+
+        ПЛОХИЕ ПРИМЕРЫ (так нельзя):
+        "Рекомендую проверить самочувствие ребёнка." — слишком расплывчато
+        "Обратите внимание на текущую погодную ситуацию." — нет конкретики
+        "AQI сейчас 142, что может негативно сказаться..." — технический стиль для голоса
         """;
 }

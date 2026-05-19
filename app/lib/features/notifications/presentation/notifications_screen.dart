@@ -240,13 +240,29 @@ class _NotificationTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isUnread ? AppColors.blueSoft.withValues(alpha: 0.4) : AppColors.card,
+          gradient: isUnread
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFEDF2FF), Color(0xFFF5F8FF)],
+                )
+              : null,
+          color: isUnread ? null : AppColors.card,
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           border: Border.all(
             color: isUnread
                 ? AppColors.primary.withValues(alpha: 0.25)
                 : AppColors.line,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: isUnread
+                  ? AppColors.primary.withValues(alpha: 0.08)
+                  : Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,8 +271,19 @@ class _NotificationTile extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: tone.bg,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [tone.bg, Color.lerp(tone.bg, tone.ink, 0.07)!],
+                ),
                 borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: tone.ink.withValues(alpha: 0.10),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Icon(_iconFor(n.type), size: 18, color: tone.ink),
             ),

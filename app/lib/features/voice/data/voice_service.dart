@@ -77,6 +77,9 @@ class VoiceService extends ChangeNotifier {
     await _tts.setVolume(1.0);
     await _tts.setPitch(locale.startsWith('ru') ? 1.0 : 1.05);
     await _setVoiceForLocale(locale);
+    // прогрев движка — устраняет задержку первого воспроизведения
+    await _tts.speak(' ');
+    await _tts.stop();
   }
 
   Future<void> ensureLocale(String ttsLocale) async {

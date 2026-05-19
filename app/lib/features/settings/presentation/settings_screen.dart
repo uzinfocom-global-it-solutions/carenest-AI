@@ -147,6 +147,13 @@ class _ProfileCard extends StatelessWidget {
         color: AppColors.card,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         border: Border.all(color: AppColors.line),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -497,6 +504,13 @@ class _SettingsGroup extends StatelessWidget {
         color: AppColors.card,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         border: Border.all(color: AppColors.line),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(children: children),
@@ -740,8 +754,19 @@ class _IconBox extends StatelessWidget {
       width: 30,
       height: 30,
       decoration: BoxDecoration(
-        color: AppColors.blueSoft,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFD6E4FF), AppColors.blueSoft],
+        ),
         borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.12),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Icon(icon, size: 16, color: AppColors.blue2),
     );

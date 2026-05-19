@@ -226,6 +226,13 @@ class _CircleIconButton extends StatelessWidget {
                 color: AppColors.card,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: AppColors.line),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Icon(icon, size: 18, color: AppColors.textSecondary),
             ),
@@ -323,15 +330,26 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
         padding: EdgeInsets.fromLTRB(initial == null ? 14 : 6, 0, 12, 0),
         decoration: BoxDecoration(
-          color: selected ? AppColors.blueSoft : AppColors.card,
+          gradient: selected
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFEBF0FF), AppColors.blueSoft],
+                )
+              : null,
+          color: selected ? null : AppColors.card,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: selected ? AppColors.primary : AppColors.line,
+            color: selected ? AppColors.primary.withValues(alpha: 0.5) : AppColors.line,
             width: selected ? 1.5 : 1,
           ),
+          boxShadow: selected
+              ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2))]
+              : null,
         ),
         child: Row(
           children: [
@@ -379,7 +397,25 @@ class _WeatherCard extends StatelessWidget {
       );
     }
     final w = weather!;
-    return AppCard(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            _gradientStartFor(w.condition),
+            _gradientEndFor(w.condition),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: _gradientStartFor(w.condition).withValues(alpha: 0.18),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -440,6 +476,13 @@ class _WeatherCard extends StatelessWidget {
                     colors: [Color(0xFFCFDCFF), AppColors.blueSoft],
                   ),
                   borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Icon(
                   _iconForCondition(w.condition),
@@ -509,6 +552,40 @@ class _WeatherCard extends StatelessWidget {
   static String _titleCase(String s) {
     if (s.isEmpty) return s;
     return s[0].toUpperCase() + s.substring(1).toLowerCase();
+  }
+
+  static Color _gradientStartFor(String c) {
+    switch (c.toLowerCase()) {
+      case 'sunny':
+        return const Color(0xFFFFF8E1);
+      case 'rainy':
+        return const Color(0xFFE3F0FF);
+      case 'snowy':
+        return const Color(0xFFEAF4FF);
+      case 'storm':
+        return const Color(0xFFEDE9FF);
+      case 'windy':
+        return const Color(0xFFE8F5F0);
+      default:
+        return const Color(0xFFEEF3FF);
+    }
+  }
+
+  static Color _gradientEndFor(String c) {
+    switch (c.toLowerCase()) {
+      case 'sunny':
+        return const Color(0xFFFFF3E0);
+      case 'rainy':
+        return const Color(0xFFD6E8FF);
+      case 'snowy':
+        return const Color(0xFFDDF1FF);
+      case 'storm':
+        return const Color(0xFFE0D8FF);
+      case 'windy':
+        return const Color(0xFFDCF2EC);
+      default:
+        return const Color(0xFFE4ECFF);
+    }
   }
 }
 
@@ -653,8 +730,20 @@ class _RecCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: GestureDetector(
         onTap: onTap,
-        child: AppCard(
+        child: Container(
           padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.line),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -662,8 +751,19 @@ class _RecCard extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: tone.bg,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [tone.bg, Color.lerp(tone.bg, tone.ink, 0.08)!],
+                  ),
                   borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: tone.ink.withValues(alpha: 0.10),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Icon(_iconFor(rec.type), size: 18, color: tone.ink),
               ),

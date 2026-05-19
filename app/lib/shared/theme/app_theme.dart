@@ -70,11 +70,19 @@ abstract final class AppTheme {
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.textOnPrimary,
           elevation: 0,
+          shadowColor: AppColors.primary,
           minimumSize: const Size(double.infinity, 52),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
           textStyle: AppTextStyles.buttonLarge,
+        ).copyWith(
+          elevation: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.pressed) ? 0 : 2,
+          ),
+          shadowColor: WidgetStateProperty.all(
+            AppColors.primary.withValues(alpha: 0.35),
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -108,12 +116,12 @@ abstract final class AppTheme {
         selectedItemColor: AppColors.navActive,
         unselectedItemColor: AppColors.navInactive,
         type: BottomNavigationBarType.fixed,
-        elevation: 0,
+        elevation: 8,
         showSelectedLabels: true,
         showUnselectedLabels: true,
         selectedLabelStyle: TextStyle(
           fontSize: 10,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
         ),
         unselectedLabelStyle: TextStyle(
           fontSize: 10,

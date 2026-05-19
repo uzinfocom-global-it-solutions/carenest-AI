@@ -40,23 +40,33 @@ public sealed class GemmaChildProfileExtractor : IChildProfileExtractor
         string sourceUserId,
         CancellationToken cancellationToken = default)
     {
-        var systemPrompt = @"You are an AI assistant that extracts child profile insights from user chat messages.
-Your ONLY output must be a valid JSON object. Do not output markdown code blocks or any other text.
-The JSON must follow this exact schema:
+        var systemPrompt = @"You are a child profile data extractor. Extract structured insights from parent messages.
+Output ONLY valid JSON — no markdown, no explanation, no code blocks. Nothing outside the JSON.
+
+EXTRACTION RULES:
+- Only extract facts that are explicitly stated. Do not infer or guess.
+- confidence: 0.9-1.0 for explicit facts (""has asthma""), 0.6-0.8 for implied (""often gets colds""), skip if speculative.
+- noteType: Health (conditions, symptoms, allergies), Routine (regular activities, sleep schedule), Behavior (habits, preferences), General (other)
+- sensitivity: only set if the message clearly describes a sensitivity (e.g. ""gets rashes in heat"" → HeatSensitive)
+- routine: only set if a time or schedule is mentioned; omit if just a one-off event
+- description: write in English, concise, factual (e.g. ""diagnosed with asthma"", not ""might have breathing issues"")
+
+OUTPUT SCHEMA (return exactly this structure):
 {
   ""insights"": [
     {
-      ""description"": ""string"",
+      ""description"": ""string — clear factual note"",
       ""noteType"": ""Routine | Health | Behavior | General"",
       ""source"": ""Ai"",
-      ""confidence"": 0.0 to 1.0,
+      ""confidence"": 0.0-1.0,
       ""sensitivity"": { ""field"": ""ColdSensitive | HeatSensitive | UvSensitive | RespiratorySensitive | PollenSensitive | AirQualitySensitive"", ""value"": true },
       ""routine"": { ""title"": ""string"", ""routineType"": ""Sleep | Meal | Medication | Sport | School | Other"", ""startTime"": ""HH:mm"", ""endTime"": ""HH:mm"", ""locationType"": ""Indoor | Outdoor"", ""activityIntensity"": ""Low | Medium | High"" }
     }
   ]
 }
-If no insights are found, return { ""insights"": [] }.
-IMPORTANT: For time, use strictly HH:mm format (24-hour). If endTime or sensitivity or routine are not applicable, omit them entirely or set to null.";
+
+If no clear insights: { ""insights"": [] }
+Times: 24-hour HH:mm. Omit sensitivity/routine fields entirely if not applicable.";
 
         var requestBody = new
         {

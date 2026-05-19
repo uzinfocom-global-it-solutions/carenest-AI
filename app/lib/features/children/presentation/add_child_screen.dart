@@ -119,7 +119,49 @@ class _AddChildScreenState extends State<AddChildScreen> {
                     height: 1.4,
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFFEBF0FF), AppColors.blueSoft],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFF5B8AFF), Color(0xFF2563FF)],
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.auto_awesome, size: 15, color: Colors.white),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          context.read<AppSettingsController>().language == AppLanguage.russian
+                              ? 'AI подберёт рекомендации под возраст и особенности ребёнка'
+                              : 'AI will personalize care advice based on your child\'s age and needs',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.blueInk,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
                 AppTextField(
                   label: strings.name,
                   hint: 'e.g. Mila',

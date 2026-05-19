@@ -130,6 +130,10 @@ class VoiceNotificationController extends ChangeNotifier {
     switch (eventType) {
       case 'voice_action_created':
       case 'voice_action_dispatch':
+        PushNotificationHandler.handleSseMessage({
+          'type': data['type'] ?? 'voice_action',
+          ...data,
+        });
         loadPending();
       case 'voice_action_confirmed':
         final id = data['actionId'] as int?;
@@ -140,8 +144,25 @@ class VoiceNotificationController extends ChangeNotifier {
         if (id != null) _updateLocalStatus(id, 'Skipped');
         notifyListeners();
       case 'escalation_step1':
+        PushNotificationHandler.handleSseMessage({
+          'type': 'voice_action',
+          'priority': 'high',
+          ...data,
+        });
+        loadPending();
       case 'escalation_step2':
+        PushNotificationHandler.handleSseMessage({
+          'type': 'voice_action',
+          'priority': 'high',
+          ...data,
+        });
+        loadPending();
       case 'emergency_escalation':
+        PushNotificationHandler.handleSseMessage({
+          'type': 'voice_action',
+          'priority': 'emergency',
+          ...data,
+        });
         loadPending();
     }
   }

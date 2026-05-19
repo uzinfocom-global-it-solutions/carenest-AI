@@ -313,13 +313,29 @@ class _MessageBubble extends StatelessWidget {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isUser ? AppColors.primary : AppColors.surface,
+          gradient: isUser
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF5B8AFF), Color(0xFF2563FF)],
+                )
+              : null,
+          color: isUser ? null : AppColors.surface,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
             bottomLeft: Radius.circular(isUser ? 16 : 4),
             bottomRight: Radius.circular(isUser ? 4 : 16),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: isUser
+                  ? AppColors.primary.withValues(alpha: 0.22)
+                  : Colors.black.withValues(alpha: 0.04),
+              blurRadius: isUser ? 12 : 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,14 +410,25 @@ class _ProposalCard extends StatelessWidget {
         ),
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
         decoration: BoxDecoration(
-          color: AppColors.blueSoft,
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFEBF0FF), AppColors.blueSoft],
+          ),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(16),
             topRight: Radius.circular(16),
             bottomLeft: Radius.circular(4),
             bottomRight: Radius.circular(16),
           ),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.22)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.10),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -983,6 +1010,13 @@ class _Composer extends StatelessWidget {
             color: AppColors.card,
             borderRadius: BorderRadius.circular(26),
             border: Border.all(color: AppColors.line),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 16,
+                offset: const Offset(0, -2),
+              ),
+            ],
           ),
           padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
           child: Row(

@@ -29,7 +29,8 @@ class PushNotificationHandler {
   ) async {
     final actionId = int.tryParse(data['actionId']?.toString() ?? '0') ?? 0;
     final text = data['text'] as String? ?? '';
-    final requiresConfirmation = data['requiresConfirmation']?.toString() == 'true';
+    final rc = data['requiresConfirmation'];
+    final requiresConfirmation = rc == true || rc?.toString() == 'true';
 
     await LocalNotificationService.instance.showVoiceAction(
       actionId: actionId,

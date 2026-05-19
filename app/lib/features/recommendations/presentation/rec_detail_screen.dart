@@ -63,6 +63,13 @@ class RecDetailScreen extends StatelessWidget {
                         color: AppColors.card,
                         shape: BoxShape.circle,
                         border: Border.all(color: AppColors.line),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: const Icon(
                         Icons.arrow_back_ios_new,
@@ -112,8 +119,19 @@ class RecDetailScreen extends StatelessWidget {
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.blueSoft,
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [Color(0xFFD6E4FF), AppColors.blueSoft],
+                                    ),
                                     borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.primary.withValues(alpha: 0.10),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
                                   child: Text(
                                     rec.type.toUpperCase(),
@@ -150,11 +168,22 @@ class RecDetailScreen extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: AppColors.card,
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [Color(0xFFFAFBFF), Color(0xFFF4F7FF)],
+                                ),
                                 borderRadius: BorderRadius.circular(
                                   AppSpacing.radiusMd,
                                 ),
-                                border: Border.all(color: AppColors.line),
+                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.10)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.04),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,

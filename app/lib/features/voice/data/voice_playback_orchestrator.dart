@@ -26,12 +26,7 @@ class VoicePlaybackOrchestrator extends ChangeNotifier {
     if (_initialized) return;
     _initialized = true;
 
-    await _tts.setLanguage('ru-RU');
-    await _tts.setSpeechRate(0.88);
-    await _tts.setVolume(1.0);
-    await _tts.setPitch(1.0);
-    await _setVoiceForLocale('ru-RU');
-
+    // хендлеры регистрируются ДО прогрева
     _tts.setStartHandler(() {
       _playing = true;
       notifyListeners();
@@ -56,7 +51,19 @@ class VoicePlaybackOrchestrator extends ChangeNotifier {
       notifyListeners();
       _processNext();
     });
+
+    await _tts.setLanguage('ru-RU');
+    await _tts.setSpeechRate(0.88);
+    await _tts.setVolume(1.0);
+    await _tts.setPitch(1.0);
+    await _setVoiceForLocale('ru-RU');
+    // прогрев движка — устраняет задержку первого воспроизведения
+    await _tts.speak(' ');
+    await _tts.stop();
   }
+
+  /// Вызвать при старте приложения чтобы прогреть TTS до первого уведомления.
+  Future<void> warmUp() => _init();
 
   Future<void> enqueue(
     String text, {

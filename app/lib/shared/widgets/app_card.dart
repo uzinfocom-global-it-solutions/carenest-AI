@@ -12,6 +12,7 @@ class AppCard extends StatelessWidget {
     this.color = AppColors.card,
     this.borderColor = AppColors.line,
     this.elevation = 0,
+    this.shadow = true,
   });
 
   final Widget child;
@@ -21,34 +22,49 @@ class AppCard extends StatelessWidget {
   final Color color;
   final Color borderColor;
   final double elevation;
+  final bool shadow;
 
   @override
   Widget build(BuildContext context) {
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(borderRadius),
-      side: BorderSide(color: borderColor),
-    );
+    final shadowList = shadow && elevation == 0
+        ? [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ]
+        : null;
 
     if (onTap != null) {
-      return Card(
-        elevation: elevation,
-        color: color,
-        shape: shape,
+      return Container(
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(borderRadius),
+          border: Border.all(color: borderColor),
+          boxShadow: shadowList,
+        ),
         clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: padding ?? const EdgeInsets.all(AppSpacing.cardPadding),
-            child: child,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: padding ?? const EdgeInsets.all(AppSpacing.cardPadding),
+              child: child,
+            ),
           ),
         ),
       );
     }
 
-    return Card(
-      elevation: elevation,
-      color: color,
-      shape: shape,
+    return Container(
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: borderColor),
+        boxShadow: shadowList,
+      ),
       child: Padding(
         padding: padding ?? const EdgeInsets.all(AppSpacing.cardPadding),
         child: child,

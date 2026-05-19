@@ -135,6 +135,7 @@ class _CareNestAiAppState extends State<CareNestAiApp> {
     WidgetsBinding.instance.addObserver(_lifecycleObserver);
     _appSettingsController = AppSettingsController()..load();
     _voiceService = VoiceService();
+    VoicePlaybackOrchestrator.instance.warmUp();
     _router = buildRouter(_authController);
     NotificationTapRouter.setNavigator((route) => _router.go(route));
     _authController.addListener(_onAuthChanged);
